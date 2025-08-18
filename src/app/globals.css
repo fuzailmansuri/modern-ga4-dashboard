@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* Removed design tokens and dark mode variables */
+@layer base { }
+
+/* ===== Baseline plain CSS (no Tailwind dependency) ===== */
+:root {
+  --bg: #f8fafc; /* slate-50 */
+  --fg: #111827; /* gray-900 */
+  --muted: #6b7280; /* gray-500 */
+  --border: #e5e7eb; /* gray-200 */
+  --card: #ffffff;
+  --primary: #2563eb; /* blue-600 */
+  --primary-hover: #1d4ed8; /* blue-700 */
+  --shadow: 0 1px 2px rgba(16,24,40,0.06), 0 1px 3px rgba(16,24,40,0.1);
+}
+
+.page { min-height: 100vh; background: var(--bg); color: var(--fg); }
+.page--center { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg); padding: 24px; }
+.page-header { position: sticky; top: 0; z-index: 20; backdrop-filter: saturate(180%) blur(6px); background: rgba(255,255,255,0.8); border-bottom: 1px solid var(--border); }
+.page-header__title { max-width: 1200px; margin: 0 auto; padding: 12px 16px; font-weight: 600; }
+.container { max-width: 1200px; margin: 0 auto; padding: 16px; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); padding: 16px; }
+.muted { color: var(--muted); }
+
+.btn { display: inline-flex; align-items: center; gap: 8px; border-radius: 8px; padding: 8px 12px; border: 1px solid var(--border); background: #fff; color: var(--fg); cursor: pointer; transition: background .15s ease; }
+.btn:hover { background: #f3f4f6; }
+.btn--primary { background: var(--primary); color: #fff; border-color: transparent; }
+.btn--primary:hover { background: var(--primary-hover); }
+
+/* Tables */
+.card table { width: 100%; border-collapse: collapse; }
+.card thead th { position: sticky; top: 0; background: #f9fafb; color: #6b7280; text-transform: uppercase; font-size: 12px; letter-spacing: .04em; text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+.card tbody td { padding: 12px; border-top: 1px solid var(--border); font-size: 14px; }
+.card tbody tr:hover { background: #f8fafc; }
+.card tbody tr.is-selected { background: #f3f4f6; border-left: 4px solid var(--border); }
+
+/* Inputs */
+input, select, textarea { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; outline: none; }
+input:focus, select:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.15); }
+label { font-size: 12px; color: var(--muted); }
+
+/* Loader */
+.loader { width: 48px; height: 48px; border-radius: 50%; border: 3px solid #e5e7eb; border-top-color: var(--primary); animation: spin 1s linear infinite; margin: 0 auto; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* DIAGNOSTIC: If you see a pink background, global CSS is loading */
+body { background: #ffe4ec !important; }
+
+/* DIAGNOSTIC: If elements with class .tw-test look lime/red with padding, Tailwind utilities are working */
+.tw-test { @apply bg-lime-300 text-red-700 p-4; }
+
+@layer base {
+  * { @apply border-gray-200; }
+  html { @apply scroll-smooth; }
+  body { @apply bg-gray-50 text-gray-900 font-sans antialiased; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 14px; line-height: 1.5; }
+
+  /* Typography scale */
+  h1 { @apply text-3xl font-semibold tracking-tight; }
+  h2 { @apply text-2xl font-semibold tracking-tight; }
+  h3 { @apply text-xl font-medium tracking-tight; }
+  h4 { @apply text-lg font-medium; }
+  h5 { @apply text-base font-medium; }
+  h6 { @apply text-sm font-medium; }
+
+  /* Focus styles */
+  *:focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; }
+
+  /* Custom scrollbars */
+  ::-webkit-scrollbar { @apply w-2 h-2; }
+  ::-webkit-scrollbar-track { @apply bg-gray-100; }
+  ::-webkit-scrollbar-thumb { @apply bg-gray-400/30 rounded-sm; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-gray-400/50; }
+}

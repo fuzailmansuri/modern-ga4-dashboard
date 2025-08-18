@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "--yes",
+        "@modelcontextprotocol/server-filesystem",
+        "--root",
+        "C:\\Users\\Laptop-931\\Downloads\\modern-ga4-dashboard-main - Copy\\modern-ga4-dashboard-main - Copy"
+      ],
+      "timeout": 600000,
+      "trust": true
+    }
+  }
+}
+
+
