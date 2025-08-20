@@ -1,5 +1,11 @@
 "use client";
 
+/**
+ * AnalyticsChatInterface
+ * Renders the chat UI for asking questions about analytics data.
+ * Props: `properties`, `currentDateRange`, `analyticsData`, `isVisible`, `onToggle`.
+ * Keep presentation-only; delegate data fetching to API routes/services.
+ */
 import { useState, useRef, useEffect } from "react";
 import type { AnalyticsProperty, AnalyticsData } from "~/types/analytics";
 
@@ -136,7 +142,9 @@ export function AnalyticsChatInterface({
     } catch (error) {
       // Enhanced error handling
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      console.error('Error processing query:', error);
+  // Log error for debugging (kept minimal to avoid leaking sensitive info)
+  // eslint-disable-next-line no-console
+  console.error('Error processing query:', error);
       
       setLastError(errorMessage);
       

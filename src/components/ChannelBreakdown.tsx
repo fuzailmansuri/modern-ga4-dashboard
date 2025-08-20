@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * ChannelBreakdown
+ * Renders a table showing session/channel breakdown for a property.
+ * Props: propertyId, startDate, endDate, compareMode, filters, className
+ */
 import React, { useMemo } from "react";
 import useSWR from "swr";
 

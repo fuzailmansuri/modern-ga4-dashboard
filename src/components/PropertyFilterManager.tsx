@@ -1,5 +1,9 @@
 "use client";
 
+/**
+ * PropertyFilterManager
+ * UI to manage property filters, priorities and tags. Uses `propertyFilterService`.
+ */
 import React, { useState, useEffect } from 'react';
 import { propertyFilterService } from '~/lib/analytics/PropertyFilterService';
 import type { PropertyFilter, FilterCriteria } from '~/lib/analytics/PropertyFilterService';

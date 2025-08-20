@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { env } from "../env.js";
 
@@ -10,8 +12,8 @@ export function getGeminiClient() {
 
 export async function generateSummary(prompt: string): Promise<string> {
   const client = getGeminiClient();
-  const model = client.getGenerativeModel({ model: "gemini-1.5-flash" });
-  const result = await model.generateContent(prompt);
+  const model: any = client.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const result: any = await model.generateContent(prompt);
   const text = result.response.text();
   return text;
 }

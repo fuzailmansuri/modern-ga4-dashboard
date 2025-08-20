@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * AnalyticsSetup
+ * UI for selecting favorite properties (brands) and metrics to analyze.
+ * Props: `properties`, `totalFound`, `onLoadAll`, `onComplete`.
+ */
 import { useEffect, useMemo, useState } from "react";
 import type { AnalyticsProperty } from "~/types/analytics";
 

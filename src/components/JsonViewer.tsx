@@ -1,5 +1,9 @@
-'use client';
+"use client";
 
+/**
+ * JsonViewer
+ * Displays JSON data with a collapsible UI for debugging and inspection.
+ */
 import { useState } from 'react';
 import JsonView from '@uiw/react-json-view';
 

@@ -317,7 +317,7 @@ export class ErrorHandlingService {
     const retryConfig = { ...this.DEFAULT_RETRY_CONFIG, ...config };
     let lastError: AnalyticsError | null = null;
     
-    for (let attempt = 1; attempt <= retryConfig.maxAttempts; attempt++) {
+  for (let attempt = 1; attempt <= retryConfig.maxAttempts; attempt++) {
       try {
         return await operation();
       } catch (error) {
@@ -348,7 +348,11 @@ export class ErrorHandlingService {
       }
     }
     
-    throw lastError;
+    // Ensure we throw an Error object (lint rule: only-throw-error)
+    if (lastError) {
+      throw new Error(JSON.stringify({ type: lastError.type, message: lastError.message }));
+    }
+    throw new Error("Unknown error during operation retry");
   }
 
   /**

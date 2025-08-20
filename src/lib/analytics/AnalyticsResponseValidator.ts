@@ -91,8 +91,8 @@ export class AnalyticsResponseValidator {
       errors: []
     };
 
-    let currentSection: 'answer' | 'insights' | 'recommendations' | null = 'answer';
-    let answerLines: string[] = [];
+  let currentSection: 'answer' | 'insights' | 'recommendations' | null = 'answer';
+  const answerLines: string[] = [];
 
     for (const line of lines) {
       const lowerLine = line.toLowerCase();
@@ -166,10 +166,11 @@ export class AnalyticsResponseValidator {
       errors.push('Response answer is too short or missing');
       // Throw error for critically short responses
       if (!parsed.answer || parsed.answer.length < 3) {
-        throw this.createValidationError(
+        // Throw a proper Error object to satisfy lint rule (@typescript-eslint/only-throw-error)
+        throw new Error(JSON.stringify(this.createValidationError(
           'Response is too short or empty',
           `Answer length: ${parsed.answer?.length || 0} characters`
-        );
+        )));
       }
     }
 

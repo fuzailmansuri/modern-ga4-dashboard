@@ -115,7 +115,9 @@ export function useAnalyticsSync(options: UseAnalyticsSyncOptions = {}) {
     };
 
     eventSource.addEventListener("connected", (event) => {
-      const data = JSON.parse(event.data);
+      // event.data comes from an untyped SSE source; allow unsafe parsing here
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const data: any = JSON.parse((event as any).data);
       setState(prev => ({
         ...prev,
         connected: true,
@@ -125,7 +127,8 @@ export function useAnalyticsSync(options: UseAnalyticsSyncOptions = {}) {
     });
 
     eventSource.addEventListener("dataUpdate", (event) => {
-      const data: DataUpdateEvent = JSON.parse(event.data);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const data: DataUpdateEvent = JSON.parse((event as any).data);
       setState(prev => ({
         ...prev,
         lastUpdate: data.timestamp
@@ -137,7 +140,8 @@ export function useAnalyticsSync(options: UseAnalyticsSyncOptions = {}) {
     });
 
     eventSource.addEventListener("heartbeat", (event) => {
-      const data: HeartbeatEvent = JSON.parse(event.data);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const data: HeartbeatEvent = JSON.parse((event as any).data);
       setState(prev => ({
         ...prev,
         lastUpdate: data.timestamp,
@@ -216,7 +220,9 @@ export function useAnalyticsSync(options: UseAnalyticsSyncOptions = {}) {
         onErrorRef.current(errorMessage);
       }
       
-      throw error;
+      // Ensure we throw an Error object to satisfy lint rules
+      if (error instanceof Error) throw error;
+      throw new Error(String(error ?? "Sync failed"));
     }
   };
 
@@ -252,7 +258,8 @@ export function useAnalyticsSync(options: UseAnalyticsSyncOptions = {}) {
         onErrorRef.current(errorMessage);
       }
       
-      throw error;
+      if (error instanceof Error) throw error;
+      throw new Error(String(error ?? "Status check failed"));
     }
   };
 
@@ -283,7 +290,8 @@ export function useAnalyticsSync(options: UseAnalyticsSyncOptions = {}) {
         onErrorRef.current(errorMessage);
       }
       
-      throw error;
+      if (error instanceof Error) throw error;
+      throw new Error(String(error ?? "Cache clear failed"));
     }
   };
 

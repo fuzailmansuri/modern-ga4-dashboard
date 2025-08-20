@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * AnalyticsPerformanceDashboard
+ * Shows an overview of property performance using `optimizedAnalyticsService`.
+ * Props: `accessToken`, `dateRange`, optional `className`.
+ */
 import React, { useState, useEffect } from 'react';
 import { optimizedAnalyticsService } from '~/lib/analytics/OptimizedAnalyticsService';
 import { propertyFilterService } from '~/lib/analytics/PropertyFilterService';
@@ -49,6 +54,7 @@ export function AnalyticsPerformanceDashboard({
       
       setPerformanceData(result);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Failed to fetch performance data:', error);
     } finally {
       setLoading(false);

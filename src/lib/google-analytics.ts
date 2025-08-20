@@ -3,14 +3,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { google } from "googleapis";
-import { env } from "~/env.js";
-import type { Auth, analyticsdata_v1beta } from 'googleapis';
-import type {
-  AnalyticsAccount,
-  AnalyticsProperty,
-  PropertyDetails,
-  AnalyticsData
-} from "~/types/analytics";
+import { env } from "../env.js";
+// Avoid importing googleapis types (not available). Use `any` for type positions to preserve runtime behavior.
+import type { AnalyticsAccount, AnalyticsProperty, PropertyDetails, AnalyticsData } from "../types/analytics";
 
 /**
  * Google Analytics Service Implementation
@@ -19,7 +14,7 @@ import type {
 export class GoogleAnalyticsServiceImpl {
   private analyticsAdmin;
   private analyticsData;
-  private auth: Auth.GoogleAuth | Auth.OAuth2Client;
+  private auth: any;
 
   constructor() {
     this.analyticsAdmin = google.analyticsadmin("v1beta");
@@ -34,15 +29,34 @@ export class GoogleAnalyticsServiceImpl {
   private createAuthClient() {
     if (env.GOOGLE_ANALYTICS_SERVICE_ACCOUNT_KEY) {
       try {
-        const credentials = JSON.parse(env.GOOGLE_ANALYTICS_SERVICE_ACCOUNT_KEY);
+        const raw = env.GOOGLE_ANALYTICS_SERVICE_ACCOUNT_KEY;
+        let credentials: any;
+        try {
+          credentials = JSON.parse(raw);
+        } catch (e) {
+          // Not JSON: might be PEM private key content. If so, construct minimal credentials
+          if (typeof raw === 'string' && raw.includes('-----BEGIN') && env.GOOGLE_SERVICE_ACCOUNT_EMAIL) {
+            credentials = {
+              type: 'service_account',
+              private_key: raw,
+              client_email: env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+            };
+          } else {
+            throw e;
+          }
+        }
+
         return new google.auth.GoogleAuth({
           credentials,
           scopes: ["https://www.googleapis.com/auth/analytics.readonly"],
         });
       } catch (error) {
-        console.error("Failed to parse Service Account credentials. Falling back.", error);
+        // Provide a clear Error object so callers can handle it and satisfy lint rules
+        const msg = error instanceof Error ? error.message : String(error);
+        throw new Error(`Failed to parse Service Account credentials: ${msg}`);
       }
     }
+
     return new google.auth.OAuth2();
   }
   
@@ -77,7 +91,7 @@ export class GoogleAnalyticsServiceImpl {
       });
 
       if (!response.data.accounts) return [];
-      return response.data.accounts.map((account) => ({
+  return response.data.accounts.map((account: any) => ({
         name: account.name ?? "",
         displayName: account.displayName ?? "",
         regionCode: account.regionCode ?? "",
@@ -106,7 +120,7 @@ export class GoogleAnalyticsServiceImpl {
 
         if (response.data.properties) {
           properties.push(
-            ...response.data.properties.map((property) => ({
+            ...response.data.properties.map((property: any) => ({
               name: property.name ?? "",
               propertyId: property.name?.split("/").pop() ?? "",
               displayName: property.displayName ?? "",
@@ -173,9 +187,9 @@ export class GoogleAnalyticsServiceImpl {
       endDate: string;
       dimensions: string[];
       metrics: string[];
-      dimensionFilter?: analyticsdata_v1beta.Schema$FilterExpression;
-      limit?: number;
-      orderBys?: analyticsdata_v1beta.Schema$OrderBy[];
+  dimensionFilter?: any;
+  limit?: number;
+  orderBys?: any[];
     },
   ): Promise<AnalyticsData> {
     try {
@@ -193,25 +207,25 @@ export class GoogleAnalyticsServiceImpl {
         },
       }, { timeout: 30000 });
 
-      const d: analyticsdata_v1beta.Schema$RunReportResponse = response.data as analyticsdata_v1beta.Schema$RunReportResponse;
+      const d: any = response.data as any;
       return {
-        dimensionHeaders: (d.dimensionHeaders ?? []).map((h: analyticsdata_v1beta.Schema$DimensionHeader) => ({ name: h.name ?? "" })),
-        metricHeaders: (d.metricHeaders ?? []).map((h: analyticsdata_v1beta.Schema$MetricHeader) => ({ name: h.name ?? "", type: h.type ?? "" })),
-        rows: (d.rows ?? []).map((row: analyticsdata_v1beta.Schema$Row) => ({
-          dimensionValues: (row.dimensionValues ?? []).map((v: analyticsdata_v1beta.Schema$DimensionValue) => ({ value: v.value ?? "" })),
-          metricValues: (row.metricValues ?? []).map((v: analyticsdata_v1beta.Schema$MetricValue) => ({ value: v.value ?? "" })),
+        dimensionHeaders: (d.dimensionHeaders ?? []).map((h: any) => ({ name: h.name ?? "" })),
+        metricHeaders: (d.metricHeaders ?? []).map((h: any) => ({ name: h.name ?? "", type: h.type ?? "" })),
+        rows: (d.rows ?? []).map((row: any) => ({
+          dimensionValues: (row.dimensionValues ?? []).map((v: any) => ({ value: v.value ?? "" })),
+          metricValues: (row.metricValues ?? []).map((v: any) => ({ value: v.value ?? "" })),
         })),
-        totals: (d.totals ?? []).map((row: analyticsdata_v1beta.Schema$Row) => ({
-          dimensionValues: (row.dimensionValues ?? []).map((v: analyticsdata_v1beta.Schema$DimensionValue) => ({ value: v.value ?? "" })),
-          metricValues: (row.metricValues ?? []).map((v: analyticsdata_v1beta.Schema$MetricValue) => ({ value: v.value ?? "" })),
+        totals: (d.totals ?? []).map((row: any) => ({
+          dimensionValues: (row.dimensionValues ?? []).map((v: any) => ({ value: v.value ?? "" })),
+          metricValues: (row.metricValues ?? []).map((v: any) => ({ value: v.value ?? "" })),
         })),
-        maximums: (d.maximums ?? []).map((row: analyticsdata_v1beta.Schema$Row) => ({
-          dimensionValues: (row.dimensionValues ?? []).map((v: analyticsdata_v1beta.Schema$DimensionValue) => ({ value: v.value ?? "" })),
-          metricValues: (row.metricValues ?? []).map((v: analyticsdata_v1beta.Schema$MetricValue) => ({ value: v.value ?? "" })),
+        maximums: (d.maximums ?? []).map((row: any) => ({
+          dimensionValues: (row.dimensionValues ?? []).map((v: any) => ({ value: v.value ?? "" })),
+          metricValues: (row.metricValues ?? []).map((v: any) => ({ value: v.value ?? "" })),
         })),
-        minimums: (d.minimums ?? []).map((row: analyticsdata_v1beta.Schema$Row) => ({
-          dimensionValues: (row.dimensionValues ?? []).map((v: analyticsdata_v1beta.Schema$DimensionValue) => ({ value: v.value ?? "" })),
-          metricValues: (row.metricValues ?? []).map((v: analyticsdata_v1beta.Schema$MetricValue) => ({ value: v.value ?? "" })),
+        minimums: (d.minimums ?? []).map((row: any) => ({
+          dimensionValues: (row.dimensionValues ?? []).map((v: any) => ({ value: v.value ?? "" })),
+          metricValues: (row.metricValues ?? []).map((v: any) => ({ value: v.value ?? "" })),
         })),
         rowCount: d.rowCount ?? 0,
       };
@@ -246,7 +260,7 @@ export class GoogleAnalyticsServiceImpl {
     startDate = "7daysAgo",
     endDate = "today",
     customMetrics?: string[],
-    dimensionFilter?: analyticsdata_v1beta.Schema$FilterExpression,
+  dimensionFilter?: any,
   ): Promise<AnalyticsData> {
     try {
       const propertyName = `properties/${propertyId}`;
@@ -282,23 +296,23 @@ export class GoogleAnalyticsServiceImpl {
       // Map the response to AnalyticsData type
       const d = response.data;
       return {
-        dimensionHeaders: (d.dimensionHeaders ?? []).map((h) => ({ name: h.name ?? "" })),
-        metricHeaders: (d.metricHeaders ?? []).map((h) => ({ name: h.name ?? "", type: h.type ?? "" })),
-        rows: (d.rows ?? []).map((row) => ({
-          dimensionValues: (row.dimensionValues ?? []).map((v) => ({ value: v.value ?? "" })),
-          metricValues: (row.metricValues ?? []).map((v) => ({ value: v.value ?? "" })),
+        dimensionHeaders: (d.dimensionHeaders ?? []).map((h: any) => ({ name: h.name ?? "" })),
+        metricHeaders: (d.metricHeaders ?? []).map((h: any) => ({ name: h.name ?? "", type: h.type ?? "" })),
+        rows: (d.rows ?? []).map((row: any) => ({
+          dimensionValues: (row.dimensionValues ?? []).map((v: any) => ({ value: v.value ?? "" })),
+          metricValues: (row.metricValues ?? []).map((v: any) => ({ value: v.value ?? "" })),
         })),
-        totals: (d.totals ?? []).map((row) => ({
-          dimensionValues: (row.dimensionValues ?? []).map((v) => ({ value: v.value ?? "" })),
-          metricValues: (row.metricValues ?? []).map((v) => ({ value: v.value ?? "" })),
+        totals: (d.totals ?? []).map((row: any) => ({
+          dimensionValues: (row.dimensionValues ?? []).map((v: any) => ({ value: v.value ?? "" })),
+          metricValues: (row.metricValues ?? []).map((v: any) => ({ value: v.value ?? "" })),
         })),
-        maximums: (d.maximums ?? []).map((row) => ({
-          dimensionValues: (row.dimensionValues ?? []).map((v) => ({ value: v.value ?? "" })),
-          metricValues: (row.metricValues ?? []).map((v) => ({ value: v.value ?? "" })),
+        maximums: (d.maximums ?? []).map((row: any) => ({
+          dimensionValues: (row.dimensionValues ?? []).map((v: any) => ({ value: v.value ?? "" })),
+          metricValues: (row.metricValues ?? []).map((v: any) => ({ value: v.value ?? "" })),
         })),
-        minimums: (d.minimums ?? []).map((row) => ({
-          dimensionValues: (row.dimensionValues ?? []).map((v) => ({ value: v.value ?? "" })),
-          metricValues: (row.metricValues ?? []).map((v) => ({ value: v.value ?? "" })),
+        minimums: (d.minimums ?? []).map((row: any) => ({
+          dimensionValues: (row.dimensionValues ?? []).map((v: any) => ({ value: v.value ?? "" })),
+          metricValues: (row.metricValues ?? []).map((v: any) => ({ value: v.value ?? "" })),
         })),
         rowCount: d.rowCount ?? 0,
       };

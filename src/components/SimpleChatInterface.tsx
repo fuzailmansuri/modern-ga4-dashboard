@@ -1,5 +1,9 @@
 "use client";
 
+/**
+ * SimpleChatInterface
+ * Lightweight chat UI used for demos and testing. Props mirror `AnalyticsChatInterface`.
+ */
 import { useState, useRef, useEffect } from "react";
 import type { AnalyticsProperty, AnalyticsData } from "~/types/analytics";
 

@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * ChatErrorDisplay
+ * Presents errors in the chat UI with optional retry and details.
+ * Props: `error`, `errorDetails`, `onRetry`, `onDismiss`, `className`.
+ */
 import React, { useState } from 'react';
 import type { ErrorType, ErrorSeverity } from '~/lib/analytics/ErrorHandlingService';
 

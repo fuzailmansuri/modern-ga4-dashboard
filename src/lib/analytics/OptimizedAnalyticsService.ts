@@ -1,6 +1,7 @@
 // Optimized Analytics Service with smart filtering and performance improvements
 
 import { googleAnalyticsService } from "~/lib/google-analytics";
+import { logger } from "~/lib/logger";
 import { propertyFilterService } from "./PropertyFilterService";
 import type { AnalyticsProperty, AnalyticsData } from "~/types/analytics";
 import type { DateRange } from "~/types/chat";
@@ -67,7 +68,7 @@ export class OptimizedAnalyticsService {
     // Apply smart filtering
     const filteredProperties = this.applySmartFiltering(allProperties, options);
     
-    console.log(`Filtered from ${allProperties.length} to ${filteredProperties.length} properties`);
+  logger.debug(`Filtered from ${allProperties.length} to ${filteredProperties.length} properties`);
     
     // Batch fetch with concurrency control
     const result = await this.batchFetchWithOptimization(

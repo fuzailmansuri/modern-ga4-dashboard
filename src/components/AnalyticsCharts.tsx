@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * AnalyticsCharts
+ * Renders charts (time series, device, countries) from an `AnalyticsData` response.
+ * Props: `data`, `propertyName`, `onRefresh`.
+ */
 import { useMemo, useState } from "react";
 import {
   LineChart,

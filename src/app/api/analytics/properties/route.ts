@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { auth } from "~/server/auth";
 import { googleAnalyticsService } from "~/lib/google-analytics";
+import { logger } from "~/lib/logger";
 import type { ApiError } from "~/types/analytics";
 
 /**
@@ -55,10 +56,10 @@ export async function GET(request: NextRequest) {
     const propertyIds = searchParams.get("propertyIds") ?? undefined;
     const favorites = searchParams.get("favorites") ?? undefined;
 
-    // Fetch all properties first
-    console.log("[properties] requesting GA properties for user:", session.user?.email ?? "unknown");
-    let properties = await googleAnalyticsService.getProperties(session.accessToken);
-    console.log("[properties] initial properties count:", properties.length);
+  // Fetch all properties first
+  logger.debug("[properties] requesting GA properties for user:", session.user?.email ?? "unknown");
+  let properties = await googleAnalyticsService.getProperties(session.accessToken);
+  logger.debug("[properties] initial properties count:", properties.length);
 
     // Filter by account if specified
     if (accountId) {
@@ -97,8 +98,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Apply limit
-    properties = properties.slice(0, limit);
-    console.log("[properties] final properties count after filters/limit:", properties.length);
+  properties = properties.slice(0, limit);
+  logger.debug("[properties] final properties count after filters/limit:", properties.length);
 
     if (properties.length === 0) {
       // Provide a helpful message when nothing is found
