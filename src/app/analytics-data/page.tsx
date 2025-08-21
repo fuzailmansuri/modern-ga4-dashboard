@@ -7,10 +7,10 @@ export default async function AnalyticsDataPage() {
   const session = await auth();
   if (!session) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <div className="w-full max-w-md rounded-lg bg-white p-6 shadow">
-          <div className="mb-3 text-xl font-semibold text-black">Analytics Properties</div>
-          <p className="mb-4 text-gray-600">You need to sign in to view your analytics data.</p>
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="w-full max-w-md rounded-lg bg-card p-6 shadow-lg border border-border">
+          <div className="mb-3 text-xl font-semibold text-foreground">Analytics Properties</div>
+          <p className="mb-4 text-muted-foreground">You need to sign in to view your analytics data.</p>
           <form
             action={async () => {
               "use server";
@@ -20,7 +20,7 @@ export default async function AnalyticsDataPage() {
           >
             <button
               type="submit"
-              className="flex w-full items-center justify-center gap-3 rounded border border-gray-300 px-6 py-3 font-semibold text-black hover:bg-gray-50"
+              className="flex w-full items-center justify-center gap-3 rounded border border-border px-6 py-3 font-semibold text-foreground bg-card hover:bg-accent transition-colors"
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24">
                 <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -62,11 +62,11 @@ export default async function AnalyticsDataPage() {
         // ignore parse errors
       }
       return (
-        <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="flex min-h-screen items-center justify-center bg-background">
           <div className="text-center">
-            <div className="mb-2 text-xl font-semibold text-black">Analytics Properties</div>
-            <p className="mb-4 text-gray-600">{message}</p>
-            <p className="text-sm text-gray-500">
+            <div className="mb-2 text-xl font-semibold text-foreground">Analytics Properties</div>
+            <p className="mb-4 text-muted-foreground">{message}</p>
+            <p className="text-sm text-muted-foreground/70">
               Ensure you are signed in with a Google account that has GA4 access and that required env vars are set.
             </p>
           </div>
@@ -78,11 +78,11 @@ export default async function AnalyticsDataPage() {
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unknown error";
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center">
-          <div className="mb-2 text-xl font-semibold text-black">Analytics Properties</div>
-          <p className="mb-4 text-gray-600">{message}</p>
-          <p className="text-sm text-gray-500">Check API credentials and network connectivity.</p>
+          <div className="mb-2 text-xl font-semibold text-foreground">Analytics Properties</div>
+          <p className="mb-4 text-muted-foreground">{message}</p>
+          <p className="text-sm text-muted-foreground/70">Check API credentials and network connectivity.</p>
         </div>
       </div>
     );

@@ -1,6 +1,154 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@theme {
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
-    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@layer base {
+  :root {
+    /* Light theme colors */
+    --background: 248 250 252; /* slate-50 */
+    --foreground: 15 23 42; /* slate-900 */
+    --card: 255 255 255; /* white */
+    --card-foreground: 15 23 42; /* slate-900 */
+    --popover: 255 255 255; /* white */
+    --popover-foreground: 15 23 42; /* slate-900 */
+    --primary: 37 99 235; /* blue-600 */
+    --primary-foreground: 248 250 252; /* slate-50 */
+    --secondary: 241 245 249; /* slate-100 */
+    --secondary-foreground: 15 23 42; /* slate-900 */
+    --muted: 241 245 249; /* slate-100 */
+    --muted-foreground: 100 116 139; /* slate-500 */
+    --accent: 241 245 249; /* slate-100 */
+    --accent-foreground: 15 23 42; /* slate-900 */
+    --destructive: 239 68 68; /* red-500 */
+    --destructive-foreground: 248 250 252; /* slate-50 */
+    --border: 226 232 240; /* slate-200 */
+    --input: 226 232 240; /* slate-200 */
+    --ring: 37 99 235; /* blue-600 */
+    --radius: 0.5rem;
+    
+    /* Chart colors for light mode */
+    --chart-1: 37 99 235; /* blue-600 */
+    --chart-2: 16 185 129; /* emerald-500 */
+    --chart-3: 251 191 36; /* amber-500 */
+    --chart-4: 239 68 68; /* red-500 */
+    --chart-5: 139 92 246; /* violet-500 */
+    --chart-6: 236 72 153; /* pink-500 */
+  }
+
+  .dark {
+    /* Pitch-black dark theme colors */
+    --background: 0 0 0; /* pure black */
+    --foreground: 248 250 252; /* slate-50 */
+    --card: 15 15 15; /* very dark gray */
+    --card-foreground: 248 250 252; /* slate-50 */
+    --popover: 15 15 15; /* very dark gray */
+    --popover-foreground: 248 250 252; /* slate-50 */
+    --primary: 59 130 246; /* blue-500 */
+    --primary-foreground: 15 23 42; /* slate-900 */
+    --secondary: 30 30 30; /* dark gray */
+    --secondary-foreground: 248 250 252; /* slate-50 */
+    --muted: 30 30 30; /* dark gray */
+    --muted-foreground: 148 163 184; /* slate-400 */
+    --accent: 30 30 30; /* dark gray */
+    --accent-foreground: 248 250 252; /* slate-50 */
+    --destructive: 239 68 68; /* red-500 */
+    --destructive-foreground: 248 250 252; /* slate-50 */
+    --border: 45 45 45; /* very dark border */
+    --input: 45 45 45; /* very dark border */
+    --ring: 59 130 246; /* blue-500 */
+    
+    /* Chart colors for dark mode - brighter for contrast */
+    --chart-1: 96 165 250; /* blue-400 */
+    --chart-2: 52 211 153; /* emerald-400 */
+    --chart-3: 251 191 36; /* amber-400 */
+    --chart-4: 248 113 113; /* red-400 */
+    --chart-5: 167 139 250; /* violet-400 */
+    --chart-6: 244 114 182; /* pink-400 */
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* Typography scale with dark mode support */
+  h1 { @apply text-3xl font-semibold tracking-tight text-foreground; }
+  h2 { @apply text-2xl font-semibold tracking-tight text-foreground; }
+  h3 { @apply text-xl font-medium tracking-tight text-foreground; }
+  h4 { @apply text-lg font-medium text-foreground; }
+  h5 { @apply text-base font-medium text-foreground; }
+  h6 { @apply text-sm font-medium text-foreground; }
+
+  /* Focus styles with dark mode support */
+  *:focus-visible { 
+    outline: 2px solid rgb(var(--ring)); 
+    outline-offset: 2px; 
+  }
+
+  /* Custom scrollbars with dark mode support */
+  ::-webkit-scrollbar { @apply w-2 h-2; }
+  ::-webkit-scrollbar-track { @apply bg-muted; }
+  ::-webkit-scrollbar-thumb { @apply bg-muted-foreground/30 rounded-sm; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-muted-foreground/50; }
+
+  /* Dark mode specific overrides */
+  .dark {
+    color-scheme: dark;
+  }
+
+  /* Chart container styling */
+  .recharts-wrapper {
+    @apply text-foreground;
+  }
+
+  .recharts-cartesian-axis-tick-value {
+    @apply fill-muted-foreground;
+  }
+
+  .recharts-legend-item-text {
+    @apply text-foreground !important;
+  }
+
+  .recharts-tooltip-wrapper {
+    @apply rounded-lg border border-border bg-card shadow-lg;
+  }
+
+  .recharts-tooltip-content {
+    @apply bg-card text-card-foreground border-0 rounded-lg shadow-lg;
+  }
+
+  /* Loading animations */
+  @keyframes pulse-dark {
+    0%, 100% { opacity: 0.1; }
+    50% { opacity: 0.3; }
+  }
+
+  .dark .animate-pulse {
+    animation: pulse-dark 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  /* Custom utility classes */
+  .glass-effect {
+    @apply backdrop-blur-md bg-white/80 dark:bg-black/80 border border-white/20 dark:border-white/10;
+  }
+
+  .card-elevated {
+    @apply bg-card border border-border shadow-lg hover:shadow-xl transition-shadow duration-200;
+  }
+
+  .text-gradient {
+    @apply bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent;
+  }
 }

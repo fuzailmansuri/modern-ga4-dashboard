@@ -10,10 +10,10 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(false);
 
   if (status === "loading") {
-    return <div className="p-6">Loading...</div>;
+    return <div className="p-6 bg-background text-foreground">Loading...</div>;
   }
   if (!session) {
-    return <div className="p-6">Please sign in to use chat.</div>;
+    return <div className="p-6 bg-background text-foreground">Please sign in to use chat.</div>;
   }
 
   const submit = async (e: React.FormEvent) => {
@@ -38,12 +38,12 @@ export default function ChatPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-background">
       <div className="mx-auto max-w-3xl p-6">
-        <h1 className="text-2xl font-bold mb-4">Analytics Chat</h1>
+        <h1 className="text-2xl font-bold mb-4 text-foreground">Analytics Chat</h1>
         <form onSubmit={submit} className="flex gap-2 mb-4">
           <input
-            className="flex-1 rounded border border-gray-300 px-3 py-2"
+            className="flex-1 rounded border border-input px-3 py-2 bg-background text-foreground placeholder:text-muted-foreground focus:border-ring focus:ring-ring"
             placeholder="Ask about your analytics..."
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
@@ -51,13 +51,13 @@ export default function ChatPage() {
           <button
             type="submit"
             disabled={loading}
-            className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-50"
+            className="rounded bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
           >
             {loading ? "Asking..." : "Ask"}
           </button>
         </form>
         {answer && (
-          <div className="rounded bg-white p-4 shadow whitespace-pre-wrap">
+          <div className="rounded bg-card border border-border p-4 shadow-lg whitespace-pre-wrap text-foreground">
             {answer}
           </div>
         )}

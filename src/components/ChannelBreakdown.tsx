@@ -129,11 +129,11 @@ export function ChannelBreakdown({
 
   if (isLoading) {
     return (
-      <div className={`rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 ${className}`}>
-        <div className="animate-pulse h-5 bg-gray-200 w-40 rounded mb-4"></div>
+      <div className={`rounded-lg border border-border bg-card p-4 ${className}`}>
+        <div className="animate-pulse h-5 bg-muted w-40 rounded mb-4"></div>
         <div className="space-y-2">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-4 bg-gray-100 dark:bg-gray-700 rounded"></div>
+            <div key={i} className="h-4 bg-muted rounded"></div>
           ))}
         </div>
       </div>
@@ -142,7 +142,7 @@ export function ChannelBreakdown({
 
   if (error) {
     return (
-      <div className={`rounded-lg border border-red-200 bg-red-50 text-red-700 p-4 ${className}`}>
+      <div className={`rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/50 text-destructive p-4 ${className}`}>
         Failed to load channel breakdown: {String(error.message || error)}
       </div>
     );
@@ -150,23 +150,23 @@ export function ChannelBreakdown({
 
   if (!rows.length) {
     return (
-      <div className={`rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 text-sm text-gray-600 dark:text-gray-300 ${className}`}>
+      <div className={`rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground ${className}`}>
         No channel data available for the selected range.
       </div>
     );
   }
 
   return (
-    <div className={`rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 ${className}`}>
-      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-        <h4 className="font-semibold text-gray-900 dark:text-gray-100">Session Default Channel Group</h4>
+    <div className={`rounded-lg border border-border bg-card ${className}`}>
+      <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+        <h4 className="font-semibold text-foreground">Session Default Channel Group</h4>
         <div className="flex items-center gap-3">
           {compareMode && compareMode !== "none" && (
-            <span className="text-xs text-gray-500">Compare: {compareMode.replace("_", " ")}</span>
+            <span className="text-xs text-muted-foreground">Compare: {compareMode.replace("_", " ")}</span>
           )}
           <button
             onClick={downloadCsv}
-            className="inline-flex items-center rounded-md border border-gray-300 dark:border-gray-600 px-2.5 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+            className="inline-flex items-center rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-accent transition-colors"
             title="Download CSV"
           >
             Download CSV
@@ -174,48 +174,48 @@ export function ChannelBreakdown({
         </div>
       </div>
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead className="bg-gray-50 dark:bg-gray-700/50">
+        <table className="min-w-full divide-y divide-border">
+          <thead className="bg-muted/50">
             <tr>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Channel</th>
-              <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Sessions</th>
+              <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Channel</th>
+              <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Sessions</th>
               {compareMode && compareMode !== "none" && (
                 <>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Prev</th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Δ</th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Δ%</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Prev</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Δ</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Δ%</th>
                 </>
               )}
-              <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Users</th>
+              <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Users</th>
               {compareMode && compareMode !== "none" && (
                 <>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Prev</th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Δ</th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Δ%</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Prev</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Δ</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Δ%</th>
                 </>
               )}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+          <tbody className="divide-y divide-border">
             {rows.map((r) => {
               const s = r.metrics.sessions;
               const u = r.metrics.totalUsers;
-              const deltaColor = (d?: number) => d === undefined ? "text-gray-500" : d > 0 ? "text-green-600" : d < 0 ? "text-red-600" : "text-gray-600";
+              const deltaColor = (d?: number) => d === undefined ? "text-muted-foreground" : d > 0 ? "text-green-600 dark:text-green-400" : d < 0 ? "text-red-600 dark:text-red-400" : "text-muted-foreground";
               return (
                 <tr key={r.channel}>
-                  <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{r.channel || "(unassigned)"}</td>
-                  <td className="px-4 py-2 text-sm text-right text-gray-900 dark:text-gray-100">{fmtNumber(s?.current)}</td>
+                  <td className="px-4 py-2 text-sm text-foreground">{r.channel || "(unassigned)"}</td>
+                  <td className="px-4 py-2 text-sm text-right text-foreground">{fmtNumber(s?.current)}</td>
                   {compareMode && compareMode !== "none" && (
                     <>
-                      <td className="px-4 py-2 text-sm text-right text-gray-700 dark:text-gray-300">{fmtNumber(s?.prev)}</td>
+                      <td className="px-4 py-2 text-sm text-right text-muted-foreground">{fmtNumber(s?.prev)}</td>
                       <td className={`px-4 py-2 text-sm text-right ${deltaColor(s?.delta)}`}>{fmtNumber(s?.delta)}</td>
                       <td className={`px-4 py-2 text-sm text-right ${deltaColor(s?.delta)}`}>{fmtPct(s?.deltaPct)}</td>
                     </>
                   )}
-                  <td className="px-4 py-2 text-sm text-right text-gray-900 dark:text-gray-100">{fmtNumber(u?.current)}</td>
+                  <td className="px-4 py-2 text-sm text-right text-foreground">{fmtNumber(u?.current)}</td>
                   {compareMode && compareMode !== "none" && (
                     <>
-                      <td className="px-4 py-2 text-sm text-right text-gray-700 dark:text-gray-300">{fmtNumber(u?.prev)}</td>
+                      <td className="px-4 py-2 text-sm text-right text-muted-foreground">{fmtNumber(u?.prev)}</td>
                       <td className={`px-4 py-2 text-sm text-right ${deltaColor(u?.delta)}`}>{fmtNumber(u?.delta)}</td>
                       <td className={`px-4 py-2 text-sm text-right ${deltaColor(u?.delta)}`}>{fmtPct(u?.deltaPct)}</td>
                     </>

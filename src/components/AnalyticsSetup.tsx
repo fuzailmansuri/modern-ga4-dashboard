@@ -104,19 +104,19 @@ export function AnalyticsSetup({ properties, totalFound, onLoadAll, onComplete }
 
   return (
     <div className="max-w-5xl mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Analytics Setup</h1>
-      <p className="text-gray-600 dark:text-zinc-300 mb-6">
+      <h1 className="text-2xl font-bold mb-4 text-foreground">Analytics Setup</h1>
+      <p className="text-muted-foreground mb-6">
         Choose your brands (favorites) and the metrics you want to analyze. You
         can change these later.
       </p>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Brands */}
-        <div className="lg:col-span-2 bg-white dark:bg-zinc-900 rounded-md shadow p-4 border border-transparent dark:border-zinc-800">
+        <div className="lg:col-span-2 bg-card rounded-md shadow-lg p-4 border border-border">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h2 className="font-semibold">Brands</h2>
-              <div className="text-xs text-gray-500 dark:text-zinc-400 mt-1">
+              <h2 className="font-semibold text-foreground">Brands</h2>
+              <div className="text-xs text-muted-foreground mt-1">
                 Showing {properties.length}
                 {typeof totalFound === 'number' ? ` of ${totalFound}` : ''} brands
               </div>
@@ -124,20 +124,20 @@ export function AnalyticsSetup({ properties, totalFound, onLoadAll, onComplete }
             <div className="flex gap-2">
               <button
                 onClick={selectAllBrands}
-                className="text-sm px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-100"
+                className="text-sm px-2 py-1 rounded bg-secondary hover:bg-secondary/80 text-secondary-foreground transition-colors"
               >
                 Select All Shown
               </button>
               <button
                 onClick={clearAllBrands}
-                className="text-sm px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-100"
+                className="text-sm px-2 py-1 rounded bg-secondary hover:bg-secondary/80 text-secondary-foreground transition-colors"
               >
                 Clear
               </button>
               {onLoadAll && typeof totalFound === 'number' && totalFound > properties.length && (
                 <button
                   onClick={onLoadAll}
-                  className="text-sm px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700"
+                  className="text-sm px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
                   title="Load all available brands"
                 >
                   Load All
@@ -149,27 +149,27 @@ export function AnalyticsSetup({ properties, totalFound, onLoadAll, onComplete }
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search brands by name or ID"
-            className="w-full mb-3 rounded border border-gray-300 dark:border-zinc-700 px-3 py-2 text-sm bg-white dark:bg-zinc-900 text-gray-900 dark:text-zinc-100 placeholder:text-gray-400 dark:placeholder:text-zinc-500"
+            className="w-full mb-3 rounded border border-input px-3 py-2 text-sm bg-background text-foreground placeholder:text-muted-foreground focus:border-ring focus:ring-ring"
           />
-          <div className="max-h-[420px] overflow-auto divide-y dark:divide-zinc-800">
+          <div className="max-h-[420px] overflow-auto divide-y divide-border">
             {filtered.map((p) => {
               const isFav = favorites.includes(p.propertyId);
               return (
                 <div key={p.propertyId} className="flex items-center justify-between py-2 px-1">
                   <div>
-                    <div className="font-medium text-gray-900 dark:text-zinc-100">{p.displayName}</div>
-                    <div className="text-xs text-gray-500 dark:text-zinc-400">{p.propertyId}</div>
+                    <div className="font-medium text-foreground">{p.displayName}</div>
+                    <div className="text-xs text-muted-foreground">{p.propertyId}</div>
                   </div>
                   <button
                     onClick={() => toggleFavorite(p.propertyId)}
                     className={`inline-flex items-center gap-1 px-2 py-1 rounded text-sm border transition-colors ${
                       isFav
-                        ? "bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-200/20 dark:text-yellow-300 dark:border-yellow-400/40"
-                        : "bg-gray-50 text-gray-700 border-gray-300 hover:bg-gray-100 dark:bg-zinc-800 dark:text-zinc-200 dark:border-zinc-700 dark:hover:bg-zinc-700"
+                        ? "bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-950/50 dark:text-yellow-400 dark:border-yellow-800"
+                        : "bg-secondary text-secondary-foreground border-border hover:bg-secondary/80"
                     }`}
                   >
                     <svg
-                      className={`w-4 h-4 ${isFav ? "text-yellow-600 dark:text-yellow-300" : "text-gray-400 dark:text-zinc-400"}`}
+                      className={`w-4 h-4 ${isFav ? "text-yellow-600 dark:text-yellow-400" : "text-muted-foreground"}`}
                       fill={isFav ? "currentColor" : "none"}
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -187,25 +187,25 @@ export function AnalyticsSetup({ properties, totalFound, onLoadAll, onComplete }
               );
             })}
             {filtered.length === 0 && (
-              <div className="py-6 text-center text-sm text-gray-500 dark:text-zinc-400">No brands found.</div>
+              <div className="py-6 text-center text-sm text-muted-foreground">No brands found.</div>
             )}
           </div>
         </div>
 
         {/* Metrics */}
-        <div className="bg-white dark:bg-zinc-900 rounded-md shadow p-4 border border-transparent dark:border-zinc-800">
+        <div className="bg-card rounded-md shadow-lg p-4 border border-border">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold">Metrics</h2>
+            <h2 className="font-semibold text-foreground">Metrics</h2>
             <div className="flex gap-2">
               <button
                 onClick={selectAllMetrics}
-                className="text-sm px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-100"
+                className="text-sm px-2 py-1 rounded bg-secondary hover:bg-secondary/80 text-secondary-foreground transition-colors"
               >
                 Select All
               </button>
               <button
                 onClick={clearAllMetrics}
-                className="text-sm px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-100"
+                className="text-sm px-2 py-1 rounded bg-secondary hover:bg-secondary/80 text-secondary-foreground transition-colors"
               >
                 Clear
               </button>
@@ -213,29 +213,30 @@ export function AnalyticsSetup({ properties, totalFound, onLoadAll, onComplete }
           </div>
           <div className="space-y-2">
             {AVAILABLE_METRICS.map((m) => (
-              <label key={m.key} className="flex items-center gap-2">
+              <label key={m.key} className="flex items-center gap-2 text-foreground">
                 <input
                   type="checkbox"
                   checked={selectedMetrics.includes(m.key)}
                   onChange={() => toggleMetric(m.key)}
+                  className="rounded border-input text-primary focus:ring-ring"
                 />
                 <span className="text-sm">{m.label}</span>
               </label>
             ))}
             {allSelected && (
-              <div className="text-xs text-gray-500 dark:text-zinc-400">All metrics selected</div>
+              <div className="text-xs text-muted-foreground">All metrics selected</div>
             )}
           </div>
         </div>
       </div>
 
       <div className="mt-6 flex items-center justify-between">
-        <div className="text-sm text-gray-600 dark:text-zinc-300">
+        <div className="text-sm text-muted-foreground">
           Selected brands: <strong>{favorites.length}</strong> | Metrics: <strong>{selectedMetrics.length}</strong>
         </div>
         <button
           onClick={() => onComplete({ favoriteIds: favorites, selectedMetrics })}
-          className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+          className="px-4 py-2 rounded bg-primary text-primary-foreground hover:bg-primary/90 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
           disabled={favorites.length === 0 || selectedMetrics.length === 0}
           title={favorites.length === 0 ? "Select at least one brand" : selectedMetrics.length === 0 ? "Select at least one metric" : undefined}
         >

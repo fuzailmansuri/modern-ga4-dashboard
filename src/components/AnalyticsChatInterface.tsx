@@ -176,7 +176,7 @@ export function AnalyticsChatInterface({
     return (
       <button
         onClick={onToggle}
-        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3 sm:p-4 shadow-lg transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full p-3 sm:p-4 shadow-lg transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
         aria-label="Open analytics chat"
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -187,9 +187,9 @@ export function AnalyticsChatInterface({
   }
 
   return (
-    <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 w-[calc(100vw-2rem)] sm:w-96 max-w-[calc(100vw-2rem)] sm:max-w-96 bg-white dark:bg-gray-800 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col max-h-[80vh] sm:max-h-[600px]">
+    <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 w-[calc(100vw-2rem)] sm:w-96 max-w-[calc(100vw-2rem)] sm:max-w-96 bg-card rounded-lg shadow-2xl border border-border flex flex-col max-h-[80vh] sm:max-h-[600px]">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-blue-600 text-white rounded-t-lg">
+      <div className="flex items-center justify-between p-4 border-b border-border bg-primary text-primary-foreground rounded-t-lg">
         <div className="flex items-center gap-2">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -200,7 +200,7 @@ export function AnalyticsChatInterface({
           {messages.length > 0 && (
             <button
               onClick={clearChat}
-              className="text-white/80 hover:text-white transition-colors p-1 rounded dark:text-gray-400"
+              className="text-primary-foreground/80 hover:text-primary-foreground transition-colors p-1 rounded"
               aria-label="Clear chat"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -210,7 +210,7 @@ export function AnalyticsChatInterface({
           )}
           <button
             onClick={onToggle}
-            className="text-white/80 hover:text-white transition-colors p-1 rounded dark:text-gray-400"
+            className="text-primary-foreground/80 hover:text-primary-foreground transition-colors p-1 rounded"
             aria-label="Close chat"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -223,12 +223,12 @@ export function AnalyticsChatInterface({
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-[200px] sm:min-h-[300px] max-h-[50vh] sm:max-h-[400px]">
         {messages.length === 0 ? (
-          <div className="text-center text-gray-500 py-8 dark:text-gray-400">
-            <svg className="w-12 h-12 mx-auto mb-4 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="text-center text-muted-foreground py-8">
+            <svg className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
             <p className="text-sm">Ask me anything about your analytics data!</p>
-            <p className="text-xs mt-2 text-gray-400 dark:text-gray-500">
+            <p className="text-xs mt-2 text-muted-foreground/70">
               Try: "How are my top brands performing?" or "Show me conversion trends"
             </p>
           </div>
@@ -241,13 +241,13 @@ export function AnalyticsChatInterface({
               <div
                 className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
                   message.type === 'user'
-                    ? 'bg-blue-600 text-white dark:bg-blue-800 dark:text-gray-100'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-300'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground'
                 }`}
               >
                 <p className="whitespace-pre-wrap">{message.content}</p>
                 <p className={`text-xs mt-1 ${
-                  message.type === 'user' ? 'text-blue-100 dark:text-blue-300' : 'text-gray-500 dark:text-gray-500'
+                  message.type === 'user' ? 'text-primary-foreground/70' : 'text-muted-foreground/70'
                 }`}>
                   {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </p>
@@ -259,14 +259,14 @@ export function AnalyticsChatInterface({
         {/* Simple Loading Indicator */}
         {isLoading && (
           <div className="flex justify-start">
-            <div className="bg-gray-100 dark:bg-gray-700 rounded-lg px-3 py-2 text-sm">
+            <div className="bg-muted rounded-lg px-3 py-2 text-sm">
               <div className="flex items-center gap-2">
                 <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-gray-400 dark:bg-gray-300 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-gray-400 dark:bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                  <div className="w-2 h-2 bg-gray-400 dark:bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                  <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                 </div>
-                <span className="text-gray-500 dark:text-gray-400">Analyzing your data...</span>
+                <span className="text-muted-foreground">Analyzing your data...</span>
               </div>
             </div>
           </div>
@@ -275,7 +275,7 @@ export function AnalyticsChatInterface({
         {/* Simple Error Display */}
         {lastError && (
           <div className="flex justify-start">
-            <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-lg px-3 py-2 text-sm text-red-700 dark:text-red-300 max-w-[80%]">
+            <div className="bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2 text-sm text-destructive max-w-[80%]">
               <div className="flex items-start gap-2">
                 <span>❌</span>
                 <div>
@@ -283,7 +283,7 @@ export function AnalyticsChatInterface({
                   <div>{lastError}</div>
                   <button
                     onClick={() => setLastError(null)}
-                    className="mt-2 px-2 py-1 bg-red-100 hover:bg-red-200 dark:bg-red-800 dark:hover:bg-red-700 rounded text-xs"
+                    className="mt-2 px-2 py-1 bg-red-100 hover:bg-red-200 dark:bg-red-900/50 dark:hover:bg-red-900/70 rounded text-xs transition-colors"
                   >
                     Dismiss
                   </button>
@@ -297,7 +297,7 @@ export function AnalyticsChatInterface({
       </div>
 
       {/* Input */}
-      <div className="border-t border-gray-200 dark:border-gray-700 p-4">
+      <div className="border-t border-border p-4">
         <form onSubmit={handleSubmit} className="flex gap-2">
           <input
             ref={inputRef}
@@ -306,15 +306,15 @@ export function AnalyticsChatInterface({
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Ask about your analytics data..."
-            className="flex-1 rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 placeholder:dark:text-gray-400"
+            className="flex-1 rounded-md border border-input px-3 py-2 text-sm bg-background text-foreground placeholder:text-muted-foreground focus:border-ring focus:ring-ring"
           />
           <button
             type="submit"
             disabled={!inputValue.trim() || isLoading}
-            className="rounded-md bg-blue-600 dark:bg-blue-800 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 dark:hover:bg-blue-900 disabled:opacity-50"
+            className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
           >
             {isLoading ? (
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground"></div>
             ) : (
               <span className="inline-flex items-center gap-2">
                 <span>Send</span>
@@ -327,7 +327,7 @@ export function AnalyticsChatInterface({
         </form>
         
         {/* Simple Context indicator */}
-        <div className="mt-2 text-xs text-gray-500 space-y-1">
+        <div className="mt-2 text-xs text-muted-foreground space-y-1">
           <div className="flex items-center justify-between">
             <span>Connected to {properties.length} properties</span>
             <span>{currentDateRange.startDate} to {currentDateRange.endDate}</span>
@@ -335,22 +335,22 @@ export function AnalyticsChatInterface({
           
           {/* Loading status */}
           {isLoading && (
-            <div className="text-blue-600 flex items-center gap-1">
-              <div className="animate-spin rounded-full h-3 w-3 border-b border-blue-600"></div>
+            <div className="text-primary flex items-center gap-1">
+              <div className="animate-spin rounded-full h-3 w-3 border-b border-primary"></div>
               Processing your request...
             </div>
           )}
           
           {/* Data status */}
           {Object.keys(analyticsData).length > 0 && !isLoading && (
-            <div className="text-green-600">
+            <div className="text-green-600 dark:text-green-400">
               ✓ Analytics data loaded for {Object.keys(analyticsData).length} properties
             </div>
           )}
           
           {/* Conversation status */}
           {messages.length > 0 && (
-            <div className="text-blue-600">
+            <div className="text-primary">
               💬 Conversation memory active ({messages.length} messages)
             </div>
           )}

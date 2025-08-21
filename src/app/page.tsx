@@ -1,19 +1,25 @@
 import Link from "next/link";
 import Image from "next/image";
 import { auth, signIn, signOut } from "~/server/auth";
+import { ThemeToggle } from "~/components/ThemeToggle";
 
 export default async function HomePage() {
   const session = await auth();
 
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-background">
+      {/* Theme Toggle */}
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
+      
       <div className="mx-auto w-full max-w-2xl p-6">
         <div className="mb-8 text-center">
-          <h1 className="mb-2 text-3xl font-bold text-black">
+          <h1 className="mb-2 text-3xl font-bold text-foreground">
             GA4 Analytics Dashboard
           </h1>
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             Access and visualize your Google Analytics data
           </p>
         </div>
@@ -22,7 +28,7 @@ export default async function HomePage() {
           {session?.user ? (
             <div className="flex w-full flex-col items-center gap-6">
               <div className="text-center">
-                <p className="mb-4 text-xl text-black">
+                <p className="mb-4 text-xl text-foreground">
                   Welcome back, {session.user.name ?? session.user.email}!
                 </p>
                 {session.user.image && (
@@ -40,7 +46,7 @@ export default async function HomePage() {
                 <Link
                   href="/analytics-data"
          
-                  className="w-full rounded border border-gray-300 px-6 py-3 text-center font-semibold text-black hover:bg-gray-50"
+                  className="w-full rounded border border-border px-6 py-3 text-center font-semibold text-foreground bg-card hover:bg-accent transition-colors"
                 >
                   View Analytics
                 </Link>
@@ -54,7 +60,7 @@ export default async function HomePage() {
                 >
                   <button
                     type="submit"
-                    className="w-full rounded border border-gray-300 px-6 py-3 font-semibold text-black hover:bg-gray-50"
+                    className="w-full rounded border border-border px-6 py-3 font-semibold text-foreground bg-card hover:bg-accent transition-colors"
                   >
                     Sign Out
                   </button>
@@ -72,7 +78,7 @@ export default async function HomePage() {
               >
                 <button
                   type="submit"
-                  className="flex w-full items-center justify-center gap-3 rounded border border-gray-300 px-6 py-3 font-semibold text-black hover:bg-gray-50"
+                  className="flex w-full items-center justify-center gap-3 rounded border border-border px-6 py-3 font-semibold text-foreground bg-card hover:bg-accent transition-colors"
                 >
                   <svg className="h-5 w-5" viewBox="0 0 24 24">
                     <path
@@ -96,7 +102,7 @@ export default async function HomePage() {
                 </button>
               </form>
 
-              <p className="mt-4 text-center text-sm text-gray-600">
+              <p className="mt-4 text-center text-sm text-muted-foreground">
                 Sign in to access your Google Analytics data and view detailed
                 insights about your properties.
               </p>

@@ -31,15 +31,15 @@ export function JsonViewer({ data, title, className = '' }: JsonViewerProps) {
   };
 
   return (
-    <div className={`border border-gray-200 rounded-lg overflow-hidden ${className}`}>
+    <div className={`border border-border rounded-lg overflow-hidden bg-card ${className}`}>
       {/* Header */}
-      <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-        <h3 className="text-sm font-medium text-gray-900">
+      <div className="bg-muted/50 px-4 py-3 border-b border-border flex items-center justify-between">
+        <h3 className="text-sm font-medium text-foreground">
           {title ?? 'JSON Data'}
         </h3>
         <button
           onClick={handleCopy}
-          className="inline-flex items-center px-3 py-1 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="inline-flex items-center px-3 py-1 border border-border shadow-sm text-xs font-medium rounded text-foreground bg-card hover:bg-accent focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring transition-colors"
         >
           {copied ? (
             <>
@@ -60,18 +60,20 @@ export function JsonViewer({ data, title, className = '' }: JsonViewerProps) {
       </div>
 
       {/* JSON Content */}
-      <div className="p-4 bg-white max-h-96 overflow-auto">
+      <div className="p-4 bg-card max-h-96 overflow-auto">
         <JsonView
           value={data as object}
           style={{
             backgroundColor: 'transparent',
             fontSize: '13px',
             fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
+            color: 'rgb(var(--foreground))',
           }}
           displayDataTypes={false}
           displayObjectSize={true}
           enableClipboard={false}
           collapsed={2}
+          theme={typeof window !== 'undefined' && document.documentElement.classList.contains('dark') ? 'dark' : 'light'}
         />
       </div>
     </div>

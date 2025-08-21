@@ -3,6 +3,7 @@ import "~/styles/globals.css";
 import { type Metadata } from "next";
 import { Geist } from "next/font/google";
 import { SessionProvider } from "next-auth/react";
+import { ThemeProvider } from "~/contexts/ThemeProvider";
 
 export const metadata: Metadata = {
   title: "Create T3 App",
@@ -21,11 +22,12 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geist.variable}`}>
       <body>
-        <SessionProvider refetchOnWindowFocus={false} >
-
-        {children}
-        </SessionProvider>
-        </body>
+        <ThemeProvider>
+          <SessionProvider refetchOnWindowFocus={false}>
+            {children}
+          </SessionProvider>
+        </ThemeProvider>
+      </body>
     </html>
   );
 }
