@@ -45,10 +45,17 @@ export default async function HomePage() {
               <div className="flex w-full flex-col gap-3">
                 <Link
                   href="/analytics-data"
-         
+
                   className="w-full rounded border border-border px-6 py-3 text-center font-semibold text-foreground bg-card hover:bg-accent transition-colors"
                 >
                   View Analytics
+                </Link>
+
+                <Link
+                  href="/delta"
+                  className="w-full rounded border border-border px-6 py-3 text-center font-semibold text-foreground bg-card hover:bg-accent transition-colors"
+                >
+                  Channel Delta Explorer
                 </Link>
 
                 <form

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import useSWR from "swr";
 import { AnalyticsCharts } from "./AnalyticsCharts";
 import { ExcelTable } from "./ExcelTable";
+import { DateRangeQuickSelect } from "./DateRangeQuickSelect";
 import { defaultMetrics, getMetricColors, getMetricLabel, formatValue } from "./_excelHelpers";
 import type { AnalyticsProperty, AnalyticsData } from "~/types/analytics";
 
@@ -644,29 +645,12 @@ export function PropertyAnalyticsDashboard({
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h3 className="mb-4 text-lg font-medium text-foreground">Date Range & Controls</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      { key: "1daysAgo", label: "Yesterday" },
-                      { key: "7daysAgo", label: "Last 7 Days" },
-                      { key: "14daysAgo", label: "Last 14 Days" },
-                      { key: "30daysAgo", label: "Last 30 Days" },
-                      { key: "90daysAgo", label: "Last 90 Days" },
-                      { key: "180daysAgo", label: "Last 6 Months" },
-                      { key: "365daysAgo", label: "Last Year" },
-                    ].map(({ key, label }) => (
-                      <button
-                        key={key}
-                        onClick={() => setDateRange({ startDate: key, endDate: "today" })}
-                        className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                          dateRange.startDate === key
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                        }`}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
+                  <DateRangeQuickSelect
+                    value={dateRange}
+                    onSelect={(option) =>
+                      setDateRange({ startDate: option.startDate, endDate: option.endDate })
+                    }
+                  />
                 </div>
                 
                 <div className="flex items-center gap-2">
