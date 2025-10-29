@@ -1,7 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { auth } from "~/server/auth";
 import { googleAnalyticsService } from "~/lib/google-analytics";
-import type { ApiError } from "~/types/analytics";
+import { createFiltersSignature, normalizeFilterValues } from "~/lib/analytics-filter-utils";
+import type { ApiError, AnalyticsFilterSelection } from "~/types/analytics";
 
 /**
  * GET /api/analytics/properties/[id]/data
@@ -65,7 +66,18 @@ export async function GET(
     const compare = searchParams.get("compare"); // "previous_period" | "previous_year"
     const organicOnly = searchParams.get("organicOnly") === "1";
 
-    // No additional CSV filters; only organicOnly supported for now
+    const parseListParam = (name: string): string[] => {
+      const raw = searchParams.get(name);
+      if (!raw) return [];
+      return normalizeFilterValues(raw.split(","));
+    };
+
+    const filters: AnalyticsFilterSelection = {
+      channelGroups: parseListParam("channelGroups"),
+      sourceMediums: parseListParam("sourceMediums"),
+      countries: parseListParam("countries"),
+      devices: parseListParam("devices"),
+    };
 
     // Metrics handling: default to sessions & users when grouping by channel
     const defaultMetrics = groupBy === "channel"
@@ -82,22 +94,54 @@ export async function GET(
     // @ts-ignore
     const CACHE: Map<string, CacheEntry> = globalThis.__ga_property_cache__;
 
-    const baseKey = `${propertyId}|${startDate}|${endDate}|${(metrics || []).join(";")}|${groupBy || ''}|${compare || ''}|organic:${organicOnly ? '1' : '0'}`;
+    const filtersSignature = createFiltersSignature(filters, organicOnly);
+    const baseKey = [
+      propertyId,
+      startDate,
+      endDate,
+      (metrics || []).join(";"),
+      groupBy || "",
+      compare || "",
+      filtersSignature,
+    ].join("|");
     const now = Date.now();
     const cached = CACHE.get(baseKey);
     if (cached && cached.expiresAt > now) {
       return NextResponse.json(cached.data);
     }
 
-    // Only organic-only filter supported
-    const dimensionFilter = organicOnly
-      ? {
-          filter: {
-            fieldName: "sessionDefaultChannelGroup",
-            stringFilter: { value: "Organic Search", matchType: "EXACT" },
+    const filterExpressions: any[] = [];
+    if (organicOnly) {
+      filterExpressions.push({
+        filter: {
+          fieldName: "sessionDefaultChannelGroup",
+          stringFilter: { value: "Organic Search", matchType: "EXACT" },
+        },
+      });
+    }
+
+    const addInListFilter = (fieldName: string, values: string[]) => {
+      if (values.length === 0) return;
+      filterExpressions.push({
+        filter: {
+          fieldName,
+          inListFilter: {
+            values,
           },
-        } as any
-      : undefined;
+        },
+      });
+    };
+
+    addInListFilter("sessionDefaultChannelGroup", filters.channelGroups);
+    addInListFilter("sessionSourceMedium", filters.sourceMediums);
+    addInListFilter("country", filters.countries);
+    addInListFilter("deviceCategory", filters.devices);
+
+    const dimensionFilter = filterExpressions.length === 0
+      ? undefined
+      : filterExpressions.length === 1
+        ? filterExpressions[0]
+        : { andGroup: { expressions: filterExpressions } };
 
     const analyticsData = await googleAnalyticsService.getAnalyticsData(
       session.accessToken,
@@ -112,9 +156,6 @@ export async function GET(
     let channelBreakdown: any[] | undefined;
     if (groupBy === "channel") {
       const dim = "sessionDefaultChannelGroup";
-
-      // No extra filters in channel breakdown for now
-      const dimensionFilter = undefined;
 
       // Helper to resolve relative date ranges (supports GA keywords or ISO). For simplicity, when given GA keywords we reuse them.
       const resolvePrevRange = (s: string, e: string, mode: string): { startDate: string; endDate: string } => {
@@ -223,6 +264,7 @@ export async function GET(
       groupBy,
       metrics,
       organicOnly,
+      filters,
     };
 
     // Cache the payload
