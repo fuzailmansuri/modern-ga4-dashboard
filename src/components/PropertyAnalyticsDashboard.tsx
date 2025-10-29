@@ -21,6 +21,8 @@ const LS_KEYS = {
 
 // Note: default metrics are imported from _excelHelpers to keep a single source of truth for table/chart.
 
+const PROPERTY_DATA_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
 // Helper to color metrics beautifully
 const getMetricColors = (metricKey: string) => {
   switch (metricKey) {
@@ -67,7 +69,7 @@ interface PropertyDataResponse {
   organicOnly: boolean;
 }
 
-// Single property data hook with 10-minute cache (matches ExcelTable behavior)
+// Single property data hook with 24-hour cache (matches API policy)
 function usePropertyData(
   property: AnalyticsProperty,
   startDate: string,
@@ -84,10 +86,9 @@ function usePropertyData(
       revalidateOnReconnect: false,
       revalidateIfStale: false,
       revalidateOnMount: true,
-      refreshInterval: 10 * 60 * 1000, // 10 minutes
       errorRetryCount: 1,
       errorRetryInterval: 5000,
-      dedupingInterval: 10 * 60 * 1000, // 10 minutes deduping
+      dedupingInterval: PROPERTY_DATA_CACHE_TTL_MS,
     }
   );
 
@@ -267,22 +268,25 @@ export function PropertyAnalyticsDashboard({
   }, [limitedProperties.length, selectedPropertyIndex]);
 
   // Activity probe: fetch a small sample to check which properties have recent data
-  // Cache activity scores for 10 minutes to reduce API calls
+  // Cache activity scores for 24 hours to align with API cache policy
   useEffect(() => {
     if (!properties.length) return;
 
     const cacheKey = `activity-${dateRange.startDate}-${dateRange.endDate}-${organicOnly ? '1' : '0'}`;
     const cached = localStorage.getItem(cacheKey);
     const cacheExpiry = localStorage.getItem(`${cacheKey}-expiry`);
-    
-    // Check if we have valid cached data (within 10 minutes)
-    if (cached && cacheExpiry && Date.now() < parseInt(cacheExpiry)) {
-      try {
-        const cachedScores = JSON.parse(cached) as Record<string, number>;
-        setActivityScores(cachedScores);
-        return;
-      } catch {
-        // Invalid cache, continue to fetch
+
+    // Check if we have valid cached data (within 24 hours)
+    if (cached && cacheExpiry) {
+      const expiry = Number(cacheExpiry);
+      if (!Number.isNaN(expiry) && Date.now() < expiry) {
+        try {
+          const cachedScores = JSON.parse(cached) as Record<string, number>;
+          setActivityScores(cachedScores);
+          return;
+        } catch {
+          // Invalid cache, continue to fetch
+        }
       }
     }
 
@@ -322,9 +326,9 @@ export function PropertyAnalyticsDashboard({
         }
       }
       
-      // Cache the results for 10 minutes
+      // Cache the results for 24 hours
       localStorage.setItem(cacheKey, JSON.stringify(scores));
-      localStorage.setItem(`${cacheKey}-expiry`, String(Date.now() + 10 * 60 * 1000));
+      localStorage.setItem(`${cacheKey}-expiry`, String(Date.now() + PROPERTY_DATA_CACHE_TTL_MS));
       
       setActivityScores(scores);
     };
@@ -332,7 +336,7 @@ export function PropertyAnalyticsDashboard({
     probeActivity();
   }, [properties, dateRange.startDate, dateRange.endDate, organicOnly]);
 
-  // Manual refresh function to invalidate cache
+  // Manual refresh function to invalidate the 24-hour cache window
   const forceRefresh = () => {
     const cacheKey = `activity-${dateRange.startDate}-${dateRange.endDate}-${organicOnly ? '1' : '0'}`;
     localStorage.removeItem(cacheKey);
@@ -761,7 +765,7 @@ export function PropertyAnalyticsDashboard({
                       <button
                         onClick={forceRefresh}
                         className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-muted-foreground bg-card border border-border rounded-md hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                        title="Refresh data (clears 10-minute cache)"
+                        title="Refresh data (clears 24-hour cache)"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
