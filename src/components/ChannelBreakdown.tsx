@@ -20,6 +20,8 @@ interface ChannelRow {
   metrics: Record<string, ChannelMetric>;
 }
 
+export type ChannelBreakdownRow = ChannelRow;
+
 const fetcher = async (url: string) => {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
@@ -45,6 +47,10 @@ export function ChannelBreakdown({
   countries = [],
   devices = [],
   className = "",
+  prefetchedRows,
+  isPrefetchedLoading = false,
+  prefetchedError,
+  highlightDelta = false,
 }: {
   propertyId: string;
   startDate: string;
@@ -55,6 +61,10 @@ export function ChannelBreakdown({
   countries?: string[];
   devices?: string[];
   className?: string;
+  prefetchedRows?: ChannelRow[];
+  isPrefetchedLoading?: boolean;
+  prefetchedError?: string | null;
+  highlightDelta?: boolean;
 }) {
   const compareParam = compareMode && compareMode !== "none" ? `&compare=${compareMode}` : "";
   const qs = [
@@ -69,8 +79,9 @@ export function ChannelBreakdown({
     devices.length ? `devices=${encodeURIComponent(devices.join(","))}` : "",
   ].filter(Boolean).join("&");
   const cacheKey = `channel-${propertyId}-${startDate}-${endDate}-${compareMode ?? "none"}-cg:${channelGroups.join("|")}-sm:${sourceMediums.join("|")}-co:${countries.join("|")}-de:${devices.join("|")}`;
+  const shouldFetch = !prefetchedRows;
   const { data, error, isLoading } = useSWR(
-    cacheKey,
+    shouldFetch ? cacheKey : null,
     () => fetcher(`/api/analytics/properties/${propertyId}/data?${qs}`),
     {
       revalidateOnFocus: false,
@@ -79,11 +90,15 @@ export function ChannelBreakdown({
     }
   );
 
+  const rawRows = prefetchedRows ?? ((data?.channelBreakdown as ChannelRow[]) || []);
   const rows: ChannelRow[] = useMemo(() => {
-    const list: ChannelRow[] = (data?.channelBreakdown as ChannelRow[]) || [];
+    const list: ChannelRow[] = rawRows ?? [];
     // Order channels by current sessions desc
     return [...list].sort((a, b) => (b.metrics.sessions?.current ?? 0) - (a.metrics.sessions?.current ?? 0));
-  }, [data]);
+  }, [rawRows]);
+
+  const loading = shouldFetch ? isLoading : isPrefetchedLoading;
+  const errorMessage = shouldFetch ? (error ? String(error.message || error) : null) : prefetchedError ?? null;
 
   function downloadCsv() {
     const headers: string[] = [
@@ -127,7 +142,7 @@ export function ChannelBreakdown({
     URL.revokeObjectURL(url);
   }
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className={`rounded-lg border border-border bg-card p-4 ${className}`}>
         <div className="animate-pulse h-5 bg-muted w-40 rounded mb-4"></div>
@@ -140,10 +155,10 @@ export function ChannelBreakdown({
     );
   }
 
-  if (error) {
+  if (errorMessage) {
     return (
       <div className={`rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/50 text-destructive p-4 ${className}`}>
-        Failed to load channel breakdown: {String(error.message || error)}
+        Failed to load channel breakdown: {errorMessage}
       </div>
     );
   }
@@ -200,7 +215,32 @@ export function ChannelBreakdown({
             {rows.map((r) => {
               const s = r.metrics.sessions;
               const u = r.metrics.totalUsers;
-              const deltaColor = (d?: number) => d === undefined ? "text-muted-foreground" : d > 0 ? "text-green-600 dark:text-green-400" : d < 0 ? "text-red-600 dark:text-red-400" : "text-muted-foreground";
+              const deltaColor = (d?: number) =>
+                d === undefined
+                  ? "text-muted-foreground"
+                  : d > 0
+                    ? "text-green-600 dark:text-green-400"
+                    : d < 0
+                      ? "text-red-600 dark:text-red-400"
+                      : "text-muted-foreground";
+              const deltaBadgeClass = (d?: number) => {
+                if (!highlightDelta || d === undefined || !isFinite(d)) {
+                  return "";
+                }
+                if (d > 0) {
+                  return "inline-flex items-center justify-end rounded-md bg-green-100 px-2 py-0.5 text-green-700 dark:bg-green-900/40 dark:text-green-300";
+                }
+                if (d < 0) {
+                  return "inline-flex items-center justify-end rounded-md bg-red-100 px-2 py-0.5 text-red-700 dark:bg-red-900/40 dark:text-red-300";
+                }
+                return "inline-flex items-center justify-end rounded-md bg-muted px-2 py-0.5 text-muted-foreground";
+              };
+              const renderDeltaCell = (value?: number) => (
+                <span className={highlightDelta ? deltaBadgeClass(value) : undefined}>{fmtNumber(value)}</span>
+              );
+              const renderDeltaPctCell = (value?: number) => (
+                <span className={highlightDelta ? deltaBadgeClass(value) : undefined}>{fmtPct(value)}</span>
+              );
               return (
                 <tr key={r.channel}>
                   <td className="px-4 py-2 text-sm text-foreground">{r.channel || "(unassigned)"}</td>
@@ -208,16 +248,24 @@ export function ChannelBreakdown({
                   {compareMode && compareMode !== "none" && (
                     <>
                       <td className="px-4 py-2 text-sm text-right text-muted-foreground">{fmtNumber(s?.prev)}</td>
-                      <td className={`px-4 py-2 text-sm text-right ${deltaColor(s?.delta)}`}>{fmtNumber(s?.delta)}</td>
-                      <td className={`px-4 py-2 text-sm text-right ${deltaColor(s?.delta)}`}>{fmtPct(s?.deltaPct)}</td>
+                      <td className={`px-4 py-2 text-sm text-right ${highlightDelta ? "" : deltaColor(s?.delta)}`}>
+                        {renderDeltaCell(s?.delta)}
+                      </td>
+                      <td className={`px-4 py-2 text-sm text-right ${highlightDelta ? "" : deltaColor(s?.delta)}`}>
+                        {renderDeltaPctCell(s?.deltaPct)}
+                      </td>
                     </>
                   )}
                   <td className="px-4 py-2 text-sm text-right text-foreground">{fmtNumber(u?.current)}</td>
                   {compareMode && compareMode !== "none" && (
                     <>
                       <td className="px-4 py-2 text-sm text-right text-muted-foreground">{fmtNumber(u?.prev)}</td>
-                      <td className={`px-4 py-2 text-sm text-right ${deltaColor(u?.delta)}`}>{fmtNumber(u?.delta)}</td>
-                      <td className={`px-4 py-2 text-sm text-right ${deltaColor(u?.delta)}`}>{fmtPct(u?.deltaPct)}</td>
+                      <td className={`px-4 py-2 text-sm text-right ${highlightDelta ? "" : deltaColor(u?.delta)}`}>
+                        {renderDeltaCell(u?.delta)}
+                      </td>
+                      <td className={`px-4 py-2 text-sm text-right ${highlightDelta ? "" : deltaColor(u?.delta)}`}>
+                        {renderDeltaPctCell(u?.deltaPct)}
+                      </td>
                     </>
                   )}
                 </tr>
