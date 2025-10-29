@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "~/server/auth";
-import type { ApiError } from "~/types/analytics";
-import type { ChatMessage } from "~/types/chat";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { googleAnalyticsService } from "~/lib/google-analytics";
+import { analyticsDataSync } from "~/lib/analytics/AnalyticsDataSync";
+import { optimizedAnalyticsService } from "~/lib/analytics/OptimizedAnalyticsService";
+import { AnalyticsContextManager } from "~/lib/analytics/AnalyticsContextManager";
+import { AnalyticsQueryProcessor } from "~/lib/analytics/AnalyticsQueryProcessor";
+import { AnalyticsGeminiService } from "~/lib/analytics/AnalyticsGeminiService";
+import type { ApiError, AnalyticsProperty } from "~/types/analytics";
+import type { AnalyticsResponse, ChatError, ChatMessage } from "~/types/chat";
 
 // Request body interface
 interface ChatRequest {
@@ -14,22 +19,32 @@ interface ChatRequest {
   };
   conversationHistory?: ChatMessage[];
   sessionId?: string;
+  filterPreset?: string;
+  maxProperties?: number;
+  organicOnly?: boolean;
+  minTrafficThreshold?: number;
+}
+
+interface CacheStatusSummary {
+  status: "fresh" | "stale" | "error" | "missing";
+  lastSync?: string;
+  message?: string;
 }
 
 // Response interface
 interface ChatApiResponse {
   success: boolean;
-  response?: {
-    answer: string;
-    dataReferences?: Array<{ propertyId: string; metric?: string }>;
-  };
+  response?: (AnalyticsResponse & {
+    warnings?: string[];
+    cacheStatus?: Record<string, CacheStatusSummary>;
+  });
   error?: string;
   errorDetails?: {
     type: string;
-    severity: string;
-    canRetry: boolean;
+    severity?: string;
+    canRetry?: boolean;
     retryAfter?: number;
-    suggestions: string[];
+    suggestions?: string[];
     code?: string;
   };
   sessionId?: string;
@@ -51,6 +66,16 @@ export async function POST(request: NextRequest) {
       const error: ApiError = {
         error: "Unauthorized",
         message: "You must be logged in to access Analytics chat",
+        statusCode: 401,
+        timestamp: new Date().toISOString(),
+      };
+      return NextResponse.json(error, { status: 401 });
+    }
+
+    if (!session.accessToken) {
+      const error: ApiError = {
+        error: "Missing Access Token",
+        message: "No valid Google Analytics access token found. Please re-authenticate.",
         statusCode: 401,
         timestamp: new Date().toISOString(),
       };
@@ -89,10 +114,13 @@ export async function POST(request: NextRequest) {
 
     // Validate conversation history if provided
     let conversationHistory: ChatMessage[] = [];
-    if (body.conversationHistory && Array.isArray(body.conversationHistory)) {
-      for (const message of body.conversationHistory) {
-        // No validation for now
-      }
+    if (Array.isArray(body.conversationHistory)) {
+      conversationHistory = body.conversationHistory
+        .filter((message): message is ChatMessage => !!message && typeof message.content === "string")
+        .map(message => ({
+          ...message,
+          timestamp: message.timestamp ? new Date(message.timestamp) : new Date(),
+        }));
     }
 
     // Generate or use provided session ID
@@ -102,31 +130,156 @@ export async function POST(request: NextRequest) {
     const existing = conversationSessions.get(sessionId) ?? [];
     const mergedHistory = [...existing, ...conversationHistory].slice(-10);
 
-    // Compose prompt
-    const ids = Array.isArray(body.propertyIds) ? body.propertyIds : [];
-    const contextSummary = `Properties selected: ${ids.length > 0 ? ids.join(', ') : 'not specified'}\nDate range: ${dateRange.startDate} to ${dateRange.endDate}`;
-    const historyText = mergedHistory
-      .map(m => `${m.type === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
-      .join('\n');
+    // Determine properties to query
+    const warningSet = new Set<string>();
+    let properties: AnalyticsProperty[] = [];
+    let allProperties: AnalyticsProperty[] = [];
 
-    const prompt = `You are an analytics assistant. Analyze Google Analytics 4 data at a strategic level. 
-Context:\n${contextSummary}\n\nRecent conversation:\n${historyText || 'None'}\n\nUser question: ${body.query}\n\nRespond with a concise, actionable answer. If data specifics are missing, state assumptions and suggest follow-up filters or metrics.`;
-
-    // Gemini
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      const error: ApiError = {
-        error: "Missing GEMINI_API_KEY",
-        message: "GEMINI_API_KEY is not configured on the server",
+    try {
+      allProperties = await googleAnalyticsService.getProperties(session.accessToken);
+    } catch (error) {
+      const apiError: ApiError = {
+        error: "Properties Fetch Failed",
+        message: "Unable to load Google Analytics properties for the current user.",
         statusCode: 500,
         timestamp: new Date().toISOString(),
       };
-      return NextResponse.json(error, { status: 500 });
+      return NextResponse.json(apiError, { status: 500 });
     }
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
-    const result = await model.generateContent(prompt);
-    const answer = result.response.text();
+
+    const requestedIds = Array.isArray(body.propertyIds) ? body.propertyIds.filter(Boolean) : [];
+    if (requestedIds.length > 0) {
+      const idSet = new Set(requestedIds);
+      properties = allProperties.filter(prop => idSet.has(prop.propertyId) || idSet.has(prop.name));
+
+      if (properties.length < requestedIds.length) {
+        warningSet.add("One or more requested properties could not be found. Showing available data instead.");
+      }
+    }
+
+    if (properties.length === 0) {
+      try {
+        const optimizedResult = await optimizedAnalyticsService.fetchOptimizedAnalyticsData(
+          session.accessToken,
+          dateRange,
+          {
+            maxProperties: body.maxProperties ?? 10,
+            organicOnly: body.organicOnly ?? false,
+            minTrafficThreshold: body.minTrafficThreshold,
+            useCache: true,
+          }
+        );
+
+        if (optimizedResult.successful.length > 0) {
+          const optimizedIds = new Set(optimizedResult.successful.map(item => item.propertyId));
+          properties = allProperties.filter(prop => optimizedIds.has(prop.propertyId));
+
+          if (optimizedResult.failed.length > 0) {
+            warningSet.add("Some properties could not be refreshed and may rely on cached data.");
+          }
+        }
+      } catch (error) {
+        warningSet.add("Unable to apply optimized property filtering. Using a default property selection.");
+      }
+    }
+
+    if (properties.length === 0) {
+      properties = allProperties.slice(0, Math.min(allProperties.length, body.maxProperties ?? 5));
+      if (properties.length === 0) {
+        const apiError: ApiError = {
+          error: "No Properties Available",
+          message: "No Google Analytics properties are available for analysis.",
+          statusCode: 404,
+          timestamp: new Date().toISOString(),
+        };
+        return NextResponse.json(apiError, { status: 404 });
+      }
+
+      warningSet.add("Falling back to the first available properties due to filtering issues.");
+    }
+
+    // Retrieve cached analytics data
+    const analyticsData = await analyticsDataSync.batchGetAnalyticsData(
+      session.accessToken,
+      properties,
+      dateRange,
+      false
+    );
+
+    const syncStatus = analyticsDataSync.getSyncStatus(properties.map(p => p.propertyId));
+    const cacheStatus: Record<string, CacheStatusSummary> = {};
+    const STALE_THRESHOLD = 5 * 60 * 1000; // 5 minutes
+
+    for (const property of properties) {
+      const status = syncStatus[property.propertyId];
+      const dataAvailable = Boolean(analyticsData[property.propertyId]);
+
+      if (!status) {
+        if (!dataAvailable) {
+          warningSet.add(`No cached analytics data is available for ${property.displayName}.`);
+        }
+
+        cacheStatus[property.propertyId] = {
+          status: dataAvailable ? "stale" : "missing",
+          message: "Cache status unavailable.",
+        };
+        continue;
+      }
+
+      const lastSyncIso = new Date(status.lastSync).toISOString();
+
+      if (status.status === "error") {
+        warningSet.add(`We couldn't refresh ${property.displayName}. Showing the last cached data.`);
+        cacheStatus[property.propertyId] = {
+          status: "error",
+          lastSync: lastSyncIso,
+          message: status.error ?? "Unknown synchronization error.",
+        };
+        continue;
+      }
+
+      const isStale = Date.now() - status.lastSync > STALE_THRESHOLD;
+      if (isStale) {
+        warningSet.add(`${property.displayName} data is older than 5 minutes. Refresh to see the latest numbers.`);
+      }
+
+      if (!dataAvailable) {
+        warningSet.add(`Cached analytics data is missing for ${property.displayName}.`);
+      }
+
+      cacheStatus[property.propertyId] = {
+        status: dataAvailable ? (isStale ? "stale" : "fresh") : "missing",
+        lastSync: lastSyncIso,
+        message: !dataAvailable
+          ? "No cached analytics report was found for this property."
+          : isStale
+            ? "Using cached analytics data older than 5 minutes."
+            : undefined,
+      };
+    }
+
+    const contextManager = new AnalyticsContextManager();
+    const analyticsContext = contextManager.buildContext(
+      properties,
+      analyticsData,
+      dateRange,
+      body.query
+    );
+
+    const queryProcessor = new AnalyticsQueryProcessor();
+    const processedQuery = await queryProcessor.processQuery(
+      body.query,
+      analyticsContext,
+      mergedHistory
+    );
+
+    const geminiService = new AnalyticsGeminiService();
+    const aiResponse = await geminiService.generateAnalyticsResponse(
+      body.query,
+      analyticsContext,
+      mergedHistory,
+      processedQuery.contextPrompt
+    );
 
     // Create user message for conversation history
     const userMessage: ChatMessage = {
@@ -134,15 +287,17 @@ Context:\n${contextSummary}\n\nRecent conversation:\n${historyText || 'None'}\n\
       type: 'user',
       content: body.query,
       timestamp: new Date(),
-    } as any;
+    };
 
     // Create assistant message for conversation history
     const assistantMessage: ChatMessage = {
       id: `msg_${Date.now()}_assistant`,
       type: 'assistant',
-      content: answer,
+      content: aiResponse.answer,
       timestamp: new Date(),
-    } as any;
+      dataReferences: aiResponse.dataReferences,
+      context: analyticsContext,
+    };
 
     // Update conversation session
     const updatedHistory = [...mergedHistory, userMessage, assistantMessage];
@@ -150,7 +305,11 @@ Context:\n${contextSummary}\n\nRecent conversation:\n${historyText || 'None'}\n\
 
     const response: ChatApiResponse = {
       success: true,
-      response: { answer },
+      response: {
+        ...aiResponse,
+        warnings: warningSet.size > 0 ? Array.from(warningSet) : undefined,
+        cacheStatus: Object.keys(cacheStatus).length > 0 ? cacheStatus : undefined,
+      },
       sessionId,
       timestamp: new Date().toISOString()
     };
@@ -158,6 +317,21 @@ Context:\n${contextSummary}\n\nRecent conversation:\n${historyText || 'None'}\n\
     return NextResponse.json(response);
 
   } catch (error) {
+    if (error && typeof error === "object" && "type" in error && "message" in error) {
+      const chatError = error as ChatError;
+      const response: ChatApiResponse = {
+        success: false,
+        error: chatError.message,
+        errorDetails: {
+          type: chatError.type,
+          canRetry: chatError.retryable,
+          severity: chatError.type === "ai_service" ? "high" : "medium",
+        },
+        timestamp: new Date().toISOString(),
+      };
+      return NextResponse.json(response, { status: 502 });
+    }
+
     const message = error instanceof Error ? error.message : "Unknown error";
     const response: ChatApiResponse = {
       success: false,

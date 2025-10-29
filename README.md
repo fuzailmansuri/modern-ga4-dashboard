@@ -22,6 +22,9 @@ GOOGLE_ANALYTICS_PROPERTY_ID=your-property-id
 GOOGLE_CLOUD_PROJECT_ID=your-project-id
 GOOGLE_SERVICE_ACCOUNT_EMAIL=your-service-account-email
 GOOGLE_ANALYTICS_ACCOUNT_ID=your-account-id
+
+# Gemini AI (Required for analytics assistant)
+GEMINI_API_KEY=your-gemini-api-key
 ```
 
 ## 📊 Google Analytics Integration
@@ -68,6 +71,19 @@ The service fetches comprehensive GA4 metrics including:
 - **Response**: GA4 analytics data with metrics and dimensions
 - **Auth**: Requires valid OAuth2 access token
 
+#### 3. `/api/analytics/chat` (POST)
+
+- **Purpose**: Ask natural-language questions about your GA4 properties
+- **Body**: `query`, optional `propertyIds`, `dateRange`, and conversation context
+- **Response**: Structured AI payload with answer, insights, recommendations, data references, and cache freshness summaries
+- **Auth**: Requires valid OAuth2 access token and configured Gemini API key
+
+#### 4. `/api/analytics/chat` (GET/DELETE)
+
+- **Purpose**: Retrieve or clear cached chat conversation history
+- **Query Params**: `sessionId`
+- **Auth**: Requires valid OAuth2 access token
+
 ## 🎨 Frontend Components
 
 ### Main Components
@@ -81,7 +97,16 @@ The service fetches comprehensive GA4 metrics including:
   - Hide/show failed dashboards toggle
   - Individual property analytics cards
 
-#### 2. `AnalyticsCharts` (`src/components/AnalyticsCharts.tsx`)
+#### 2. `AnalyticsChatInterface` (`src/components/AnalyticsChatInterface.tsx`)
+
+- **Purpose**: Natural-language analytics assistant that surfaces Gemini answers, insights, recommended actions, data references, and cache warnings
+- **Features**:
+  - Conversational memory with session persistence
+  - Cache freshness summaries for each response
+  - Structured rendering of AI insights and recommendations
+  - Global warning banner for stale or missing analytics data
+
+#### 3. `AnalyticsCharts` (`src/components/AnalyticsCharts.tsx`)
 
 - **Purpose**: Data visualization component
 - **Charts**:
@@ -90,10 +115,18 @@ The service fetches comprehensive GA4 metrics including:
   - **Country Bar Chart**: Top countries by active users
   - **Metrics Overview Cards**: Key metrics summary
 
-#### 3. `JsonViewer` (`src/components/JsonViewer.tsx`)
+#### 4. `JsonViewer` (`src/components/JsonViewer.tsx`)
 
 - **Purpose**: Raw JSON data display for debugging
 - **Features**: Collapsible JSON tree view
+
+### Analytics Chat Data Flow
+
+1. **Request Intake** → `/api/analytics/chat` validates the user query, determines relevant properties, and fetches cached GA4 reports via `AnalyticsDataSync`
+2. **Context Building** → `AnalyticsContextManager` aggregates metrics, trends, and comparisons into an analytics context
+3. **Query Processing** → `AnalyticsQueryProcessor` interprets the user intent and crafts a conversation-aware prompt
+4. **AI Response** → `AnalyticsGeminiService` generates a structured Gemini response (answer, insights, recommendations, data references, confidence)
+5. **UI Rendering** → `AnalyticsChatInterface` displays the structured payload, cache freshness, and any warning banners alongside the chat conversation
 
 ### Data Flow
 

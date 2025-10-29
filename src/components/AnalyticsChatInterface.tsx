@@ -6,15 +6,25 @@
  * Props: `properties`, `currentDateRange`, `analyticsData`, `isVisible`, `onToggle`.
  * Keep presentation-only; delegate data fetching to API routes/services.
  */
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import type { AnalyticsProperty, AnalyticsData } from "~/types/analytics";
+import type { AnalyticsResponse } from "~/types/chat";
 
 // Chat message types
+interface CacheStatusSummary {
+  status: "fresh" | "stale" | "error" | "missing";
+  lastSync?: string;
+  message?: string;
+}
+
 interface ChatMessage {
   id: string;
   type: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  structuredResponse?: AnalyticsResponse;
+  warnings?: string[];
+  cacheStatus?: Record<string, CacheStatusSummary>;
 }
 
 interface AnalyticsChatInterfaceProps {
@@ -37,10 +47,36 @@ export function AnalyticsChatInterface({
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId] = useState<string>(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
   const [lastError, setLastError] = useState<string | null>(null);
+  const [warningMessages, setWarningMessages] = useState<string[]>([]);
+  const [cacheStatus, setCacheStatus] = useState<Record<string, CacheStatusSummary> | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const lastContextRef = useRef<string>("");
+  const propertyNameLookup = useMemo(() => {
+    const map = new Map<string, string>();
+    properties.forEach(property => {
+      map.set(property.propertyId, property.displayName);
+    });
+    return map;
+  }, [properties]);
+
+  const cacheSummary = useMemo(() => {
+    if (!cacheStatus) return null;
+    const summary = { fresh: 0, stale: 0, error: 0, missing: 0 } as Record<CacheStatusSummary["status"], number>;
+    Object.values(cacheStatus).forEach(status => {
+      summary[status.status] += 1;
+    });
+    return summary;
+  }, [cacheStatus]);
+
+  const cacheSummaryText = useMemo(() => {
+    if (!cacheSummary) return null;
+    const parts = Object.entries(cacheSummary)
+      .filter(([, count]) => count > 0)
+      .map(([status, count]) => `${count} ${status}`);
+    return parts.length > 0 ? parts.join(', ') : 'no cached data';
+  }, [cacheSummary]);
 
   // Auto-scroll to bottom when new messages are added
   useEffect(() => {
@@ -87,6 +123,8 @@ export function AnalyticsChatInterface({
     setInputValue("");
     setLastError(null);
     setIsLoading(true);
+    setWarningMessages([]);
+    setCacheStatus(null);
 
     try {
       // Call the analytics chat API with context
@@ -99,7 +137,13 @@ export function AnalyticsChatInterface({
           query: userMessage.content,
           propertyIds: properties.map(p => p.propertyId),
           dateRange: currentDateRange,
-          conversationHistory: messages.slice(-5), // Send last 5 messages for context
+          conversationHistory: messages.slice(-5).map(message => ({
+            id: message.id,
+            type: message.type,
+            content: message.structuredResponse ? message.structuredResponse.answer : message.content,
+            timestamp: message.timestamp,
+            dataReferences: message.structuredResponse?.dataReferences,
+          })),
           sessionId: sessionId,
           filterPreset: 'favorites', // Use optimized filtering
           maxProperties: 15,
@@ -118,7 +162,9 @@ export function AnalyticsChatInterface({
       if (!data.success) {
         // Handle API-level errors
         setLastError(data.error || 'Request failed');
-        
+        setWarningMessages(data.response?.warnings || []);
+        setCacheStatus(data.response?.cacheStatus || null);
+
         const errorMessage: ChatMessage = {
           id: (Date.now() + 1).toString(),
           type: 'assistant',
@@ -129,25 +175,43 @@ export function AnalyticsChatInterface({
         setMessages(prev => [...prev, errorMessage]);
         return;
       }
-      
+
+      const structuredResponse: AnalyticsResponse | undefined = data.response
+        ? {
+            answer: data.response.answer,
+            insights: data.response.insights || [],
+            recommendations: data.response.recommendations || [],
+            dataReferences: data.response.dataReferences || [],
+            confidence: data.response.confidence ?? 0,
+          }
+        : undefined;
+
+      setWarningMessages(data.response?.warnings || []);
+      setCacheStatus(data.response?.cacheStatus || null);
+
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
         content: data.response?.answer || "I couldn't process your request. Please try again.",
         timestamp: new Date(),
+        structuredResponse,
+        warnings: data.response?.warnings,
+        cacheStatus: data.response?.cacheStatus,
       };
-      
+
       setMessages(prev => [...prev, assistantMessage]);
-      
+
     } catch (error) {
       // Enhanced error handling
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-  // Log error for debugging (kept minimal to avoid leaking sensitive info)
-  // eslint-disable-next-line no-console
-  console.error('Error processing query:', error);
-      
+      // Log error for debugging (kept minimal to avoid leaking sensitive info)
+      // eslint-disable-next-line no-console
+      console.error('Error processing query:', error);
+
       setLastError(errorMessage);
-      
+      setWarningMessages([]);
+      setCacheStatus(null);
+
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
@@ -222,6 +286,22 @@ export function AnalyticsChatInterface({
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-[200px] sm:min-h-[300px] max-h-[50vh] sm:max-h-[400px]">
+        {warningMessages.length > 0 && (
+          <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 rounded-lg px-3 py-2 text-sm text-amber-900 dark:text-amber-100">
+            <div className="flex items-start gap-2">
+              <span className="mt-0.5 text-lg">⚠️</span>
+              <div>
+                <div className="font-semibold">Data Warnings</div>
+                <ul className="mt-2 list-disc space-y-1 pl-4 text-xs">
+                  {warningMessages.map((warning, index) => (
+                    <li key={`${warning}-${index}`}>{warning}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
         {messages.length === 0 ? (
           <div className="text-center text-muted-foreground py-8">
             <svg className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -245,8 +325,110 @@ export function AnalyticsChatInterface({
                     : 'bg-muted text-muted-foreground'
                 }`}
               >
-                <p className="whitespace-pre-wrap">{message.content}</p>
-                <p className={`text-xs mt-1 ${
+                {message.type === 'assistant' && message.structuredResponse ? (
+                  <div className="space-y-3">
+                    <div className="whitespace-pre-wrap text-foreground dark:text-foreground">
+                      {message.structuredResponse.answer}
+                    </div>
+
+                    {typeof message.structuredResponse.confidence === 'number' && (
+                      <div className="text-xs text-muted-foreground">
+                        Confidence: {Math.round(message.structuredResponse.confidence * 100)}%
+                      </div>
+                    )}
+
+                    {message.structuredResponse.insights.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Key insights</p>
+                        <ul className="mt-1 space-y-1 text-xs text-muted-foreground">
+                          {message.structuredResponse.insights.map((insight, index) => (
+                            <li key={`insight-${index}`} className="leading-relaxed">
+                              • {insight}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {message.structuredResponse.recommendations.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Recommended actions</p>
+                        <ul className="mt-1 space-y-1 text-xs text-muted-foreground">
+                          {message.structuredResponse.recommendations.map((recommendation, index) => (
+                            <li key={`rec-${index}`} className="leading-relaxed">
+                              • {recommendation}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {message.structuredResponse.dataReferences.length > 0 && (
+                      <div className="rounded-md border border-border/60 bg-background/60 p-2">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Data references</p>
+                        <ul className="mt-2 space-y-2 text-xs text-muted-foreground">
+                          {message.structuredResponse.dataReferences.map((reference, index) => (
+                            <li key={`data-ref-${index}`}>
+                              <div className="font-medium text-foreground">
+                                {propertyNameLookup.get(reference.propertyId) || reference.propertyId}
+                              </div>
+                              <div className="text-muted-foreground">
+                                {reference.metric ? `${reference.metric}: ` : ''}{reference.value}
+                              </div>
+                              <div className="text-muted-foreground/70 text-[11px]">
+                                {reference.dateRange.startDate} → {reference.dateRange.endDate}
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {message.warnings && message.warnings.length > 0 && (
+                      <div className="rounded-md border border-amber-200 bg-amber-50/80 p-2 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/60 dark:text-amber-100">
+                        <p className="font-semibold uppercase tracking-wide">Warnings</p>
+                        <ul className="mt-1 space-y-1">
+                          {message.warnings.map((warning, index) => (
+                            <li key={`warning-${index}`}>• {warning}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {message.cacheStatus && Object.keys(message.cacheStatus).length > 0 && (
+                      <div className="rounded-md border border-border/70 bg-background/80 p-2 text-xs text-muted-foreground">
+                        <p className="font-semibold uppercase tracking-wide">Cache status</p>
+                        <ul className="mt-1 space-y-1">
+                          {Object.entries(message.cacheStatus).map(([propertyId, status]) => {
+                            const label = propertyNameLookup.get(propertyId) || propertyId;
+                            const statusLabel =
+                              status.status === 'fresh'
+                                ? 'Fresh'
+                                : status.status === 'stale'
+                                  ? 'Stale'
+                                  : status.status === 'error'
+                                    ? 'Error'
+                                    : 'Missing';
+                            const lastSync = status.lastSync ? new Date(status.lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null;
+                            return (
+                              <li key={`cache-${propertyId}`} className="leading-relaxed">
+                                <span className="font-medium text-foreground">{label}</span>: {statusLabel}
+                                {lastSync && <span className="text-muted-foreground/70"> · {lastSync}</span>}
+                                {status.message && (
+                                  <div className="text-muted-foreground/70 text-[11px]">{status.message}</div>
+                                )}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="whitespace-pre-wrap">{message.content}</p>
+                )}
+
+                <p className={`text-xs mt-3 ${
                   message.type === 'user' ? 'text-primary-foreground/70' : 'text-muted-foreground/70'
                 }`}>
                   {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -347,7 +529,13 @@ export function AnalyticsChatInterface({
               ✓ Analytics data loaded for {Object.keys(analyticsData).length} properties
             </div>
           )}
-          
+
+          {cacheSummaryText && (
+            <div className="text-xs text-muted-foreground">
+              Cache freshness: {cacheSummaryText}
+            </div>
+          )}
+
           {/* Conversation status */}
           {messages.length > 0 && (
             <div className="text-primary">
