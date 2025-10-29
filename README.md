@@ -68,6 +68,23 @@ The service fetches comprehensive GA4 metrics including:
 - **Response**: GA4 analytics data with metrics and dimensions
 - **Auth**: Requires valid OAuth2 access token
 
+### Dimension filters
+
+The property data endpoint and dashboard UI accept optional query filters that map directly to GA4 dimension names. Multiple values are provided as comma-separated lists in the request.
+
+| Query string | GA4 dimension | UI location |
+| --- | --- | --- |
+| `channelGroups` | `sessionDefaultChannelGroup` | Dashboard “Channel groups” chips |
+| `sourceMediums` | `sessionSourceMedium` | “Source / medium pairs” token input |
+| `countries` | `country` | “Countries” token input |
+| `devices` | `deviceCategory` | “Device categories” chips |
+
+- Channel groups must use GA’s canonical labels. The UI surfaces the standard set provided in `src/lib/analytics-filter-utils.ts` (e.g. `Organic Search`, `Paid Social`, `Direct`, `(Other)`).
+- Device category filters accept the GA4 values `desktop`, `mobile`, and `tablet`.
+- Source/medium and country filters are case-sensitive; enter the exact strings returned by GA4 to receive matches.
+
+All active filters are applied consistently to the time-series charts, table exports, activity probe, and the channel breakdown report.
+
 ## 🎨 Frontend Components
 
 ### Main Components

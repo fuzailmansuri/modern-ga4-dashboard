@@ -1,7 +1,8 @@
 "use client";
 
 import React from 'react';
-import type { AnalyticsProperty } from "~/types/analytics";
+import type { AnalyticsProperty, AnalyticsFilterSelection } from "~/types/analytics";
+import { buildFiltersSearchParams, createFiltersSignature } from "~/lib/analytics-filter-utils";
 import useSWR from "swr";
 import { defaultMetrics, getMetricColors, getMetricLabel, formatValue } from "./_excelHelpers";
 
@@ -12,11 +13,24 @@ async function fetcher<T>(url: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-function usePropertyData(property: AnalyticsProperty, startDate: string, endDate: string, refreshKey: number, organicOnly: boolean) {
+function usePropertyData(
+  property: AnalyticsProperty,
+  startDate: string,
+  endDate: string,
+  refreshKey: number,
+  organicOnly: boolean,
+  filters: AnalyticsFilterSelection,
+) {
   const metricsQuery = defaultMetrics.join(',');
   const { data, error, isLoading } = useSWR(
-    `${property.propertyId}-${startDate}-${endDate}-${refreshKey}-org:${organicOnly ? '1' : '0'}`,
-    () => fetcher(`/api/analytics/properties/${property.propertyId}/data?startDate=${startDate}&endDate=${endDate}&metrics=${metricsQuery}${organicOnly ? '&organicOnly=1' : ''}`),
+    `${property.propertyId}-${startDate}-${endDate}-${refreshKey}-${createFiltersSignature(filters, organicOnly)}`,
+    () => {
+      const params = buildFiltersSearchParams(filters, organicOnly);
+      params.set('startDate', startDate);
+      params.set('endDate', endDate);
+      params.set('metrics', metricsQuery);
+      return fetcher(`/api/analytics/properties/${property.propertyId}/data?${params.toString()}`);
+    },
     { revalidateOnFocus: false, revalidateOnReconnect: false, revalidateIfStale: false }
   );
 
@@ -43,7 +57,7 @@ function extractMetrics(resp?: any): Record<string, number> {
   return metrics;
 }
 
-function PropertyRow({ property, startDate, endDate, refreshKey, isSelected, onClick, isFavorite, onToggleFavorite, organicOnly }: {
+function PropertyRow({ property, startDate, endDate, refreshKey, isSelected, onClick, isFavorite, onToggleFavorite, organicOnly, filters }: {
   property: AnalyticsProperty;
   startDate: string;
   endDate: string;
@@ -53,8 +67,9 @@ function PropertyRow({ property, startDate, endDate, refreshKey, isSelected, onC
   isFavorite: boolean;
   onToggleFavorite: () => void;
   organicOnly: boolean;
+  filters: AnalyticsFilterSelection;
 }) {
-  const { data, error, isLoading } = usePropertyData(property, startDate, endDate, refreshKey, organicOnly);
+  const { data, error, isLoading } = usePropertyData(property, startDate, endDate, refreshKey, organicOnly, filters);
   const metrics = extractMetrics(data);
 
   if (isLoading) return (
@@ -89,7 +104,7 @@ function PropertyRow({ property, startDate, endDate, refreshKey, isSelected, onC
   );
 }
 
-export function ExcelTable({ properties, startDate, endDate, refreshKey, selectedPropertyIndex, onPropertySelect, favorites, onToggleFavorite, organicOnly }: {
+export function ExcelTable({ properties, startDate, endDate, refreshKey, selectedPropertyIndex, onPropertySelect, favorites, onToggleFavorite, organicOnly, filters }: {
   properties: AnalyticsProperty[];
   startDate: string;
   endDate: string;
@@ -99,6 +114,7 @@ export function ExcelTable({ properties, startDate, endDate, refreshKey, selecte
   favorites: Set<string>;
   onToggleFavorite: (propertyId: string) => void;
   organicOnly: boolean;
+  filters: AnalyticsFilterSelection;
 }) {
   return (
     <div className="bg-card border border-border rounded-lg shadow-lg overflow-hidden">
@@ -115,7 +131,7 @@ export function ExcelTable({ properties, startDate, endDate, refreshKey, selecte
           </thead>
           <tbody className="bg-card divide-y divide-border">
             {properties.map((property, index) => (
-              <PropertyRow key={property.propertyId} property={property} startDate={startDate} endDate={endDate} refreshKey={refreshKey} isSelected={index === selectedPropertyIndex} onClick={() => onPropertySelect(index)} isFavorite={favorites.has(property.propertyId)} onToggleFavorite={() => onToggleFavorite(property.propertyId)} organicOnly={organicOnly} />
+              <PropertyRow key={property.propertyId} property={property} startDate={startDate} endDate={endDate} refreshKey={refreshKey} isSelected={index === selectedPropertyIndex} onClick={() => onPropertySelect(index)} isFavorite={favorites.has(property.propertyId)} onToggleFavorite={() => onToggleFavorite(property.propertyId)} organicOnly={organicOnly} filters={filters} />
             ))}
           </tbody>
         </table>

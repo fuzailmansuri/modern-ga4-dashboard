@@ -7,6 +7,7 @@
  */
 import React, { useMemo } from "react";
 import useSWR from "swr";
+import { normalizeFilterValues } from "~/lib/analytics-filter-utils";
 
 interface ChannelMetric {
   current: number;
@@ -56,22 +57,42 @@ export function ChannelBreakdown({
   devices?: string[];
   className?: string;
 }) {
-  const compareParam = compareMode && compareMode !== "none" ? `&compare=${compareMode}` : "";
-  const qs = [
-    `startDate=${encodeURIComponent(startDate)}`,
-    `endDate=${encodeURIComponent(endDate)}`,
-    `groupBy=channel`,
-    `metrics=sessions,totalUsers`,
-    compareParam.replace(/^&/, ""),
-    channelGroups.length ? `channelGroups=${encodeURIComponent(channelGroups.join(","))}` : "",
-    sourceMediums.length ? `sourceMediums=${encodeURIComponent(sourceMediums.join(","))}` : "",
-    countries.length ? `countries=${encodeURIComponent(countries.join(","))}` : "",
-    devices.length ? `devices=${encodeURIComponent(devices.join(","))}` : "",
-  ].filter(Boolean).join("&");
-  const cacheKey = `channel-${propertyId}-${startDate}-${endDate}-${compareMode ?? "none"}-cg:${channelGroups.join("|")}-sm:${sourceMediums.join("|")}-co:${countries.join("|")}-de:${devices.join("|")}`;
+  const normalizedFilters = useMemo(() => ({
+    channelGroups: normalizeFilterValues(channelGroups),
+    sourceMediums: normalizeFilterValues(sourceMediums),
+    countries: normalizeFilterValues(countries),
+    devices: normalizeFilterValues(devices),
+  }), [channelGroups, sourceMediums, countries, devices]);
+
+  const params = useMemo(() => {
+    const search = new URLSearchParams({
+      startDate,
+      endDate,
+      groupBy: "channel",
+      metrics: "sessions,totalUsers",
+    });
+    if (compareMode && compareMode !== "none") {
+      search.set("compare", compareMode);
+    }
+    if (normalizedFilters.channelGroups.length) {
+      search.set("channelGroups", normalizedFilters.channelGroups.join(","));
+    }
+    if (normalizedFilters.sourceMediums.length) {
+      search.set("sourceMediums", normalizedFilters.sourceMediums.join(","));
+    }
+    if (normalizedFilters.countries.length) {
+      search.set("countries", normalizedFilters.countries.join(","));
+    }
+    if (normalizedFilters.devices.length) {
+      search.set("devices", normalizedFilters.devices.join(","));
+    }
+    return search;
+  }, [endDate, startDate, compareMode, normalizedFilters]);
+
+  const cacheKey = `channel-${propertyId}-${startDate}-${endDate}-${compareMode ?? "none"}-cg:${normalizedFilters.channelGroups.join("|")}-sm:${normalizedFilters.sourceMediums.join("|")}-co:${normalizedFilters.countries.join("|")}-de:${normalizedFilters.devices.join("|")}`;
   const { data, error, isLoading } = useSWR(
     cacheKey,
-    () => fetcher(`/api/analytics/properties/${propertyId}/data?${qs}`),
+    () => fetcher(`/api/analytics/properties/${propertyId}/data?${params.toString()}`),
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: false,

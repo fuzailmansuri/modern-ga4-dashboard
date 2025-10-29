@@ -1,12 +1,21 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { KeyboardEvent } from "react";
 import useSWR from "swr";
 import { AnalyticsCharts } from "./AnalyticsCharts";
 import { ExcelTable } from "./ExcelTable";
 import { defaultMetrics, getMetricColors, getMetricLabel, formatValue } from "./_excelHelpers";
-import type { AnalyticsProperty, AnalyticsData } from "~/types/analytics";
+import { ChannelBreakdown } from "./ChannelBreakdown";
+import {
+  GA4_CHANNEL_GROUP_OPTIONS,
+  GA4_DEVICE_CATEGORIES,
+  buildFiltersSearchParams,
+  createFiltersSignature,
+  normalizeFilterValues,
+} from "~/lib/analytics-filter-utils";
+import type { AnalyticsProperty, AnalyticsData, AnalyticsFilterSelection } from "~/types/analytics";
 
 // Local storage keys for persisting UI choices
 const LS_KEYS = {
@@ -67,6 +76,7 @@ interface PropertyDataResponse {
   groupBy?: string;
   metrics: string[];
   organicOnly: boolean;
+  filters?: AnalyticsFilterSelection;
 }
 
 // Single property data hook with 24-hour cache (matches API policy)
@@ -76,11 +86,19 @@ function usePropertyData(
   endDate: string,
   refreshKey: number,
   organicOnly: boolean,
+  filters: AnalyticsFilterSelection,
 ) {
   const metricsQuery = defaultMetrics.join(',');
+  const signature = createFiltersSignature(filters, organicOnly);
   const { data, error, isLoading } = useSWR<PropertyDataResponse>(
-    `${property.propertyId}-${startDate}-${endDate}-${refreshKey}-org:${organicOnly ? '1' : '0'}`,
-    () => fetch(`/api/analytics/properties/${property.propertyId}/data?startDate=${startDate}&endDate=${endDate}&metrics=${metricsQuery}${organicOnly ? '&organicOnly=1' : ''}`).then(r => r.json()),
+    `${property.propertyId}-${startDate}-${endDate}-${refreshKey}-${signature}`,
+    () => {
+      const params = buildFiltersSearchParams(filters, organicOnly);
+      params.set("startDate", startDate);
+      params.set("endDate", endDate);
+      params.set("metrics", metricsQuery);
+      return fetch(`/api/analytics/properties/${property.propertyId}/data?${params.toString()}`).then(r => r.json());
+    },
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
@@ -97,6 +115,122 @@ function usePropertyData(
 
 // The ExcelTable and related helpers were moved to `src/components/ExcelTable.tsx` and `src/components/_excelHelpers.ts` to keep this file focused.
 
+const createEmptyFilters = (): AnalyticsFilterSelection => ({
+  channelGroups: [],
+  sourceMediums: [],
+  countries: [],
+  devices: [],
+});
+
+const removeValueCaseInsensitive = (values: string[], target: string) => {
+  const lower = target.toLowerCase();
+  return values.filter((value) => value.toLowerCase() !== lower);
+};
+
+type ChannelCompareMode = "previous_period" | "previous_year" | "none";
+
+function FilterToggleChip({
+  label,
+  selected,
+  onToggle,
+}: {
+  label: string;
+  selected: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition-colors ${selected ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-border hover:bg-accent"}`}
+    >
+      {label}
+    </button>
+  );
+}
+
+function TokenInput({
+  label,
+  values,
+  onChange,
+  placeholder,
+  description,
+}: {
+  label: string;
+  values: string[];
+  onChange: (next: string[]) => void;
+  placeholder: string;
+  description?: string;
+}) {
+  const [draft, setDraft] = useState("");
+
+  const commitDraft = () => {
+    if (!draft.trim()) return;
+    const tokens = draft.split(/[,\n]+/).map((token) => token.trim()).filter(Boolean);
+    if (!tokens.length) {
+      setDraft("");
+      return;
+    }
+    const next = normalizeFilterValues([...values, ...tokens]);
+    onChange(next);
+    setDraft("");
+  };
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter" || event.key === ",") {
+      event.preventDefault();
+      commitDraft();
+    }
+    if (event.key === "Backspace" && !draft && values.length) {
+      onChange(values.slice(0, -1));
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-medium text-foreground">{label}</span>
+        {values.length > 0 && (
+          <button
+            type="button"
+            className="text-xs text-muted-foreground hover:text-foreground"
+            onClick={() => onChange([])}
+          >
+            Clear
+          </button>
+        )}
+      </div>
+      <div className="flex flex-wrap gap-2 rounded-md border border-border bg-background px-2 py-2">
+        {values.map((value) => (
+          <span
+            key={value.toLowerCase()}
+            className="inline-flex items-center gap-1 rounded-full bg-accent px-3 py-1 text-xs text-foreground"
+          >
+            {value}
+            <button
+              type="button"
+              className="text-xs text-muted-foreground hover:text-foreground"
+              onClick={() => onChange(removeValueCaseInsensitive(values, value))}
+              aria-label={`Remove ${value}`}
+            >
+              ×
+            </button>
+          </span>
+        ))}
+        <input
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={commitDraft}
+          placeholder={placeholder}
+          className="flex-1 min-w-[140px] border-0 bg-transparent text-xs text-foreground placeholder:text-muted-foreground focus:outline-none"
+        />
+      </div>
+      {description && <p className="text-xs text-muted-foreground">{description}</p>}
+    </div>
+  );
+}
+
 // Individual Property Analytics for Chart View
 function PropertyAnalytics({
   property,
@@ -107,6 +241,8 @@ function PropertyAnalytics({
   isFavorite,
   onToggleFavorite,
   organicOnly,
+  filters,
+  channelCompareMode,
 }: {
   property: AnalyticsProperty;
   startDate: string;
@@ -116,6 +252,8 @@ function PropertyAnalytics({
   isFavorite: boolean;
   onToggleFavorite: () => void;
   organicOnly: boolean;
+  filters: AnalyticsFilterSelection;
+  channelCompareMode: ChannelCompareMode;
 }) {
   const { data, error, isLoading } = usePropertyData(
     property,
@@ -123,6 +261,7 @@ function PropertyAnalytics({
     endDate,
     refreshKey,
     organicOnly,
+    filters,
   );
   const dataObj = data;
 
@@ -215,6 +354,17 @@ function PropertyAnalytics({
           propertyName={`${property.displayName} (${property.propertyId})`}
           onRefresh={() => {}}
         />
+        <ChannelBreakdown
+          propertyId={property.propertyId}
+          startDate={startDate}
+          endDate={endDate}
+          compareMode={channelCompareMode === "none" ? undefined : channelCompareMode}
+          channelGroups={filters.channelGroups}
+          sourceMediums={filters.sourceMediums}
+          countries={filters.countries}
+          devices={filters.devices}
+          className="mt-6"
+        />
       </div>
     </div>
   );
@@ -244,6 +394,54 @@ export function PropertyAnalyticsDashboard({
   const [favoritesOnly, setFavoritesOnly] = useState<boolean>(false);
   const [organicOnly, setOrganicOnly] = useState<boolean>(false);
   const [isExporting, setIsExporting] = useState<boolean>(false);
+  const [filters, setFilters] = useState<AnalyticsFilterSelection>(() => createEmptyFilters());
+  const [channelCompareMode, setChannelCompareMode] = useState<ChannelCompareMode>("none");
+
+  const filtersSignature = useMemo(
+    () => createFiltersSignature(filters, organicOnly),
+    [filters, organicOnly],
+  );
+
+  const updateFilterValues = (key: keyof AnalyticsFilterSelection, values: string[]) => {
+    setFilters((prev) => ({
+      ...prev,
+      [key]: normalizeFilterValues(values),
+    }));
+  };
+
+  const toggleChannelGroup = (group: string) => {
+    setFilters((prev) => {
+      const has = prev.channelGroups.some((value) => value.toLowerCase() === group.toLowerCase());
+      const next = has
+        ? removeValueCaseInsensitive(prev.channelGroups, group)
+        : [...prev.channelGroups, group];
+      return {
+        ...prev,
+        channelGroups: normalizeFilterValues(next),
+      };
+    });
+  };
+
+  const toggleDevice = (device: string) => {
+    setFilters((prev) => {
+      const has = prev.devices.some((value) => value.toLowerCase() === device.toLowerCase());
+      const next = has
+        ? removeValueCaseInsensitive(prev.devices, device)
+        : [...prev.devices, device];
+      return {
+        ...prev,
+        devices: normalizeFilterValues(next),
+      };
+    });
+  };
+
+  const handleSourceMediumChange = (next: string[]) => updateFilterValues("sourceMediums", next);
+  const handleCountryChange = (next: string[]) => updateFilterValues("countries", next);
+
+  const clearFilters = () => {
+    setFilters(createEmptyFilters());
+    setChannelCompareMode("none");
+  };
 
   // Filter properties based on search
   const filteredProperties = properties.filter(
@@ -272,7 +470,7 @@ export function PropertyAnalyticsDashboard({
   useEffect(() => {
     if (!properties.length) return;
 
-    const cacheKey = `activity-${dateRange.startDate}-${dateRange.endDate}-${organicOnly ? '1' : '0'}`;
+    const cacheKey = `activity-${dateRange.startDate}-${dateRange.endDate}-${filtersSignature}`;
     const cached = localStorage.getItem(cacheKey);
     const cacheExpiry = localStorage.getItem(`${cacheKey}-expiry`);
 
@@ -298,9 +496,14 @@ export function PropertyAnalyticsDashboard({
             const metricsQuery = 'totalUsers,sessions';
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout for probe
-            
+
+            const params = buildFiltersSearchParams(filters, organicOnly);
+            params.set('startDate', dateRange.startDate);
+            params.set('endDate', dateRange.endDate);
+            params.set('metrics', metricsQuery);
+
             const res = await fetch(
-              `/api/analytics/properties/${p.propertyId}/data?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}&metrics=${metricsQuery}${organicOnly ? '&organicOnly=1' : ''}`,
+              `/api/analytics/properties/${p.propertyId}/data?${params.toString()}`,
               { signal: controller.signal }
             );
             
@@ -334,11 +537,11 @@ export function PropertyAnalyticsDashboard({
     };
 
     probeActivity();
-  }, [properties, dateRange.startDate, dateRange.endDate, organicOnly]);
+  }, [properties, dateRange.startDate, dateRange.endDate, organicOnly, filtersSignature, filters]);
 
   // Manual refresh function to invalidate the 24-hour cache window
   const forceRefresh = () => {
-    const cacheKey = `activity-${dateRange.startDate}-${dateRange.endDate}-${organicOnly ? '1' : '0'}`;
+    const cacheKey = `activity-${dateRange.startDate}-${dateRange.endDate}-${filtersSignature}`;
     localStorage.removeItem(cacheKey);
     localStorage.removeItem(`${cacheKey}-expiry`);
     setRefreshKey(prev => prev + 1);
@@ -386,8 +589,13 @@ export function PropertyAnalyticsDashboard({
               const controller = new AbortController();
               const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
               
+              const params = buildFiltersSearchParams(filters, organicOnly);
+              params.set('startDate', dateRange.startDate);
+              params.set('endDate', dateRange.endDate);
+              params.set('metrics', metricsQuery);
+
               const res = await fetch(
-                `/api/analytics/properties/${property.propertyId}/data?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}&metrics=${metricsQuery}${organicOnly ? '&organicOnly=1' : ''}`,
+                `/api/analytics/properties/${property.propertyId}/data?${params.toString()}`,
                 { signal: controller.signal }
               );
               
@@ -795,6 +1003,91 @@ export function PropertyAnalyticsDashboard({
                   </div>
                 </div>
               </div>
+
+              <div className="mt-4 border-t border-border pt-4 space-y-6">
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-foreground">Channel groups</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {GA4_CHANNEL_GROUP_OPTIONS.map((group) => (
+                      <FilterToggleChip
+                        key={group}
+                        label={group}
+                        selected={filters.channelGroups.some((value) => value.toLowerCase() === group.toLowerCase())}
+                        onToggle={() => toggleChannelGroup(group)}
+                      />
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Values map to the GA4 <code className="font-mono">sessionDefaultChannelGroup</code> dimension.
+                  </p>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <span className="text-sm font-medium text-foreground">Device categories</span>
+                  <div className="flex flex-wrap gap-2">
+                    {GA4_DEVICE_CATEGORIES.map((device) => (
+                      <FilterToggleChip
+                        key={device}
+                        label={device}
+                        selected={filters.devices.some((value) => value.toLowerCase() === device.toLowerCase())}
+                        onToggle={() => toggleDevice(device)}
+                      />
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Matches GA4 <code className="font-mono">deviceCategory</code> values (desktop, mobile, tablet).
+                  </p>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <TokenInput
+                    label="Source / medium pairs"
+                    values={filters.sourceMediums}
+                    onChange={handleSourceMediumChange}
+                    placeholder="e.g. google / organic"
+                    description="Applies to the GA4 sessionSourceMedium dimension. Enter exact strings separated by commas or press Enter."
+                  />
+                  <TokenInput
+                    label="Countries"
+                    values={filters.countries}
+                    onChange={handleCountryChange}
+                    placeholder="e.g. United States"
+                    description="Filters against the GA4 country dimension. Use the exact country names reported by GA."
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <label htmlFor="channel-compare-mode" className="text-sm text-foreground">
+                      Channel compare range
+                    </label>
+                    <select
+                      id="channel-compare-mode"
+                      value={channelCompareMode}
+                      onChange={(event) => setChannelCompareMode(event.target.value as ChannelCompareMode)}
+                      className="rounded-md border-input bg-background text-sm text-foreground focus:border-ring focus:ring-ring"
+                    >
+                      <option value="none">No compare</option>
+                      <option value="previous_period">Previous period</option>
+                      <option value="previous_year">Previous year</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span>Filters apply to all analytics charts and the channel breakdown.</span>
+                    {(filters.channelGroups.length > 0 || filters.devices.length > 0 || filters.sourceMediums.length > 0 || filters.countries.length > 0 || channelCompareMode !== "none") && (
+                      <button
+                        type="button"
+                        className="text-xs text-muted-foreground hover:text-foreground"
+                        onClick={clearFilters}
+                      >
+                        Reset filters
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -812,6 +1105,7 @@ export function PropertyAnalyticsDashboard({
               favorites={favorites}
               onToggleFavorite={toggleFavorite}
               organicOnly={organicOnly}
+              filters={filters}
             />
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -826,6 +1120,8 @@ export function PropertyAnalyticsDashboard({
                   isFavorite={favorites.has(property.propertyId)}
                   onToggleFavorite={() => toggleFavorite(property.propertyId)}
                   organicOnly={organicOnly}
+                  filters={filters}
+                  channelCompareMode={channelCompareMode}
                 />
               ))}
             </div>

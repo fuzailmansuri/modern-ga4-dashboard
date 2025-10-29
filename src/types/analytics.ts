@@ -66,6 +66,13 @@ export interface ApiError {
   timestamp: string;
 }
 
+export interface AnalyticsFilterSelection {
+  channelGroups: string[];
+  sourceMediums: string[];
+  countries: string[];
+  devices: string[];
+}
+
 // Google Analytics API Response Types
 export interface GoogleAnalyticsAccountsResponse {
   accounts: AnalyticsAccount[];
