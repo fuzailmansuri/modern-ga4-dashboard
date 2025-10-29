@@ -76,7 +76,7 @@ export async function GET(
 
     // Simple in-memory cache (module-scoped)
     type CacheEntry = { data: any; expiresAt: number };
-    const TTL_MS = 10 * 60 * 1000; // 10 minutes
+    const TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
     // @ts-ignore module scoped singleton
     globalThis.__ga_property_cache__ = globalThis.__ga_property_cache__ || new Map<string, CacheEntry>();
     // @ts-ignore
