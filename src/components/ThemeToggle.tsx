@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useTheme } from "~/contexts/ThemeProvider";
+import type { Theme } from "~/contexts/ThemeProvider";
 
 export function ThemeToggle() {
   const { theme, resolvedTheme, setTheme, toggleTheme } = useTheme();
