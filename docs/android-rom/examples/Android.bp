@@ -1,0 +1,94 @@
+// Example Android.bp for Protobuf Prebuilt Libraries
+// Location: proprietary_vendor_nothing_asteroids/proprietary/vendor/lib64/Android.bp
+
+soong_namespace {
+}
+
+// Protobuf Full Library (Version 21.7)
+cc_prebuilt_library_shared {
+    name: "libprotobuf-cpp-full-21.7",
+    owner: "nothing",
+    strip: {
+        none: true,
+    },
+    target: {
+        android_arm64: {
+            srcs: ["libprotobuf-cpp-full-21.7.so"],
+        },
+    },
+    compile_multilib: "64",
+    check_elf_files: false,
+    prefer: true,
+    soc_specific: true,
+    proprietary: true,
+}
+
+// Protobuf Lite Library (Version 21.7)
+cc_prebuilt_library_shared {
+    name: "libprotobuf-cpp-lite-21.7",
+    owner: "nothing",
+    strip: {
+        none: true,
+    },
+    target: {
+        android_arm64: {
+            srcs: ["libprotobuf-cpp-lite-21.7.so"],
+        },
+    },
+    compile_multilib: "64",
+    check_elf_files: false,
+    prefer: true,
+    soc_specific: true,
+    proprietary: true,
+}
+
+// Alternative: If building a shim library instead
+// This redirects calls from versioned library to AOSP protobuf
+cc_library_shared {
+    name: "libprotobuf-cpp-full-21.7-shim",
+    vendor: true,
+    proprietary: true,
+    
+    srcs: [
+        "shim/protobuf_shim.cpp",
+    ],
+    
+    shared_libs: [
+        "libprotobuf-cpp-full",  // AOSP version
+        "liblog",
+        "libutils",
+    ],
+    
+    cflags: [
+        "-Wall",
+        "-Werror",
+        "-Wno-unused-parameter",
+    ],
+    
+    compile_multilib: "64",
+    
+    // Override the output name to match expected library
+    stem: "libprotobuf-cpp-full-21.7",
+}
+
+// If you need to install both 32-bit and 64-bit versions
+cc_prebuilt_library_shared {
+    name: "libprotobuf-cpp-full-21.7-multilib",
+    owner: "nothing",
+    strip: {
+        none: true,
+    },
+    target: {
+        android_arm64: {
+            srcs: ["libprotobuf-cpp-full-21.7.so"],
+        },
+        android_arm: {
+            srcs: ["lib32/libprotobuf-cpp-full-21.7.so"],
+        },
+    },
+    compile_multilib: "both",
+    check_elf_files: false,
+    prefer: true,
+    soc_specific: true,
+    proprietary: true,
+}
