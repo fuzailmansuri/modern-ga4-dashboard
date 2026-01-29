@@ -1,3 +1,15 @@
+# Modern GA4 Dashboard
+
+A comprehensive Google Analytics 4 dashboard built with Next.js, TypeScript, and React.
+
+## 📚 Additional Documentation
+
+- **[Android Custom ROM Development](docs/android-rom/README.md)** - Technical guides for Android custom ROM development
+  - [Protobuf Linking Guide](docs/android-rom/PROTOBUF_LINKING_GUIDE.md) - Resolve vendor HAL protobuf library issues
+  - [Diagnostic Scripts](docs/android-rom/check_protobuf_deps.sh) - Automated dependency analysis tools
+
+---
+
 ## 🔐 Authentication & Authorization
 
 ### Google OAuth2 Setup
