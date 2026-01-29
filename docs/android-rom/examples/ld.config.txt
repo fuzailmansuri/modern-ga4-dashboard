@@ -1,0 +1,115 @@
+# Linker Namespace Configuration for Protobuf Access
+# Location: device/nothing/asteroids/configs/ld.config.txt
+#
+# This file configures the dynamic linker namespaces to allow vendor
+# binaries to access required libraries across partition boundaries
+# while maintaining Treble compliance
+
+###############################################################################
+# Vendor Namespace Configuration
+###############################################################################
+
+[vendor]
+# Isolate vendor namespace from system
+namespace.default.isolated = true
+
+# Search paths for vendor libraries
+namespace.default.search.paths  = /vendor/${LIB}
+namespace.default.search.paths += /vendor/${LIB}/vndk
+namespace.default.search.paths += /vendor/${LIB}/hw
+
+# Permitted paths vendor can access
+namespace.default.permitted.paths  = /vendor/${LIB}
+namespace.default.permitted.paths += /system/${LIB}/vndk-sp
+namespace.default.permitted.paths += /system/${LIB}/vndk
+
+# Allow vendor to link to system libraries
+namespace.default.links = system
+
+# Specific system libraries vendor can access
+# Including protobuf for compatibility
+namespace.default.link.system.shared_libs  = libc.so
+namespace.default.link.system.shared_libs += libm.so
+namespace.default.link.system.shared_libs += libdl.so
+namespace.default.link.system.shared_libs += liblog.so
+namespace.default.link.system.shared_libs += libutils.so
+namespace.default.link.system.shared_libs += libcutils.so
+namespace.default.link.system.shared_libs += libhardware.so
+namespace.default.link.system.shared_libs += libbase.so
+namespace.default.link.system.shared_libs += libhidlbase.so
+
+# Protobuf libraries (if using AOSP version as fallback)
+# Uncomment if vendor blobs should access system protobuf
+# namespace.default.link.system.shared_libs += libprotobuf-cpp-full.so
+# namespace.default.link.system.shared_libs += libprotobuf-cpp-lite.so
+
+###############################################################################
+# System Namespace Configuration
+###############################################################################
+
+[system]
+namespace.default.isolated = false
+
+namespace.default.search.paths  = /system/${LIB}
+namespace.default.search.paths += /system/${LIB}/vndk-sp
+namespace.default.search.paths += /system/${LIB}/vndk
+
+namespace.default.permitted.paths  = /system/${LIB}
+namespace.default.permitted.paths += /system/${LIB}/vndk-sp
+namespace.default.permitted.paths += /system/${LIB}/vndk
+namespace.default.permitted.paths += /vendor/${LIB}
+
+# Allow system to use vendor libraries if needed
+namespace.default.links = vendor
+
+namespace.default.link.vendor.shared_libs = libEGL.so
+namespace.default.link.vendor.shared_libs += libGLESv1_CM.so
+namespace.default.link.vendor.shared_libs += libGLESv2.so
+namespace.default.link.vendor.shared_libs += libGLESv3.so
+
+###############################################################################
+# Notes for Protobuf Compatibility
+###############################################################################
+
+# Option 1: Vendor-contained (Recommended)
+#   - Keep libprotobuf-cpp-full-21.7.so in /vendor/lib64/
+#   - Vendor binaries link to vendor copy
+#   - No namespace configuration needed
+#   - Maintains Treble isolation
+
+# Option 2: System fallback (If ABI compatible)
+#   - Uncomment protobuf in namespace.default.link.system.shared_libs
+#   - Vendor binaries can use AOSP protobuf
+#   - May cause symbol version issues
+#   - Test thoroughly before using
+
+# Option 3: Shim library
+#   - Create wrapper library that redirects calls
+#   - Place shim in vendor partition
+#   - Provides compatibility layer
+#   - More complex but flexible
+
+###############################################################################
+# Debugging
+###############################################################################
+
+# To enable linker debugging:
+# adb root
+# adb shell setprop debug.ld.all dlerror,dlopen,dlsym
+# adb reboot
+# adb logcat -b all | grep linker
+
+# To verify namespace configuration:
+# adb shell cat /proc/<pid>/maps | grep protobuf
+# adb shell ldd /vendor/bin/hw/service-name
+
+###############################################################################
+# Additional Resources
+###############################################################################
+
+# Official documentation:
+# - https://source.android.com/devices/architecture/vndk/linker-namespace
+# - https://android.googlesource.com/platform/system/linkerconfig/
+
+# Example configurations:
+# - https://android.googlesource.com/platform/system/core/+/master/rootdir/etc/

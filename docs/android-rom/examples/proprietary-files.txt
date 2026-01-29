@@ -1,0 +1,55 @@
+# Example proprietary-files.txt
+# Location: proprietary_vendor_nothing_asteroids/proprietary-files.txt
+#
+# This file lists all proprietary blobs that should be included in the vendor image
+# Format: [partition]/path/to/file
+#
+# For protobuf library linking issues, ensure all required protobuf libraries
+# are listed here with their correct paths
+
+# Protobuf Libraries (Version 21.7)
+vendor/lib64/libprotobuf-cpp-full-21.7.so
+vendor/lib64/libprotobuf-cpp-lite-21.7.so
+
+# If needed in system_ext partition instead
+# system_ext/lib64/libprotobuf-cpp-full-21.7.so
+# system_ext/lib64/libprotobuf-cpp-lite-21.7.so
+
+# 32-bit versions (if device supports 32-bit)
+# vendor/lib/libprotobuf-cpp-full-21.7.so
+# vendor/lib/libprotobuf-cpp-lite-21.7.so
+
+# Common vendor HALs that may depend on protobuf
+vendor/bin/hw/android.hardware.health-service.asteroids
+vendor/lib64/android.hardware.health@2.1.so
+vendor/lib64/vendor.hardware.health-impl.so
+
+# Other protobuf dependencies
+# Add any other vendor libraries or binaries that depend on protobuf
+vendor/lib64/libvendor_framework.so
+vendor/lib64/libqti_vndfwk_detect.so
+
+# Camera HAL (often uses protobuf)
+vendor/lib64/libcamxexternalformatutils.so
+vendor/lib64/libipebpsstriping.so
+
+# Audio HAL (may use protobuf for configuration)
+vendor/lib64/libaudioroute.so
+
+# Fingerprint HAL (often uses protobuf)
+vendor/lib64/libvendor.goodix.hardware.biometrics.fingerprint@2.1.so
+
+# Sensors HAL (may use protobuf)
+vendor/lib64/libsensorslog.so
+
+# Neural Networks HAL (uses protobuf for model loading)
+vendor/lib64/libneuralnetworks_shim.so
+
+# Note: After adding libraries, regenerate Android.bp files using:
+# ./setup-makefiles.sh
+#
+# To extract these files from stock firmware:
+# 1. Download and extract stock ROM
+# 2. Mount vendor.img: sudo mount -o loop vendor.img /mnt
+# 3. Copy files: cp /mnt/lib64/libprotobuf* .
+# 4. Unmount: sudo umount /mnt
